@@ -6,7 +6,13 @@ module.exports = [
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
-    ignores: ['node_modules/**', 'dist/**', 'build/**', '*.min.js'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      '*.min.js',
+      'coverage/**',
+    ],
     plugins: {
       '@typescript-eslint': tseslint,
     },

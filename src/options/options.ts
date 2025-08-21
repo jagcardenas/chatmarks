@@ -1,11 +1,11 @@
 /**
  * Options Page Script for Chatmarks Extension
- * 
+ *
  * Handles the settings interface for customizing extension behavior,
  * appearance, and keyboard shortcuts.
  */
 
-import { MessageType } from '../types/messages';
+// import { MessageType } from '../types/messages'; // Will be used when messaging is implemented
 
 interface ExtensionSettings {
   highlightColor: string;
@@ -33,11 +33,11 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
     createBookmark: 'Ctrl+B',
     nextBookmark: 'Alt+ArrowDown',
     prevBookmark: 'Alt+ArrowUp',
-    showSidebar: 'Ctrl+Shift+B'
+    showSidebar: 'Ctrl+Shift+B',
   },
   autoSave: true,
   contextMenu: true,
-  floatingButton: true
+  floatingButton: true,
 };
 
 /**
@@ -52,10 +52,10 @@ async function initializeOptionsPage(): Promise<void> {
   try {
     // Load current settings
     await loadSettings();
-    
+
     // Set up event listeners
     setupEventListeners();
-    
+
     console.log('Chatmarks options page initialized');
   } catch (error) {
     console.error('Failed to initialize options page:', error);
@@ -70,10 +70,10 @@ async function loadSettings(): Promise<void> {
   try {
     const result = await chrome.storage.local.get('settings');
     const settings: ExtensionSettings = result.settings || DEFAULT_SETTINGS;
-    
+
     // Populate form fields with current settings
     populateForm(settings);
-    
+
     console.log('Settings loaded:', settings);
   } catch (error) {
     console.error('Failed to load settings:', error);
@@ -87,21 +87,34 @@ async function loadSettings(): Promise<void> {
  */
 function populateForm(settings: ExtensionSettings): void {
   // Appearance settings
-  (document.getElementById('highlight-color') as HTMLInputElement).value = settings.highlightColor;
-  (document.getElementById('show-minimap') as HTMLInputElement).checked = settings.showMinimap;
-  (document.getElementById('sidebar-position') as HTMLSelectElement).value = settings.sidebarPosition;
-  
+  (document.getElementById('highlight-color') as HTMLInputElement).value =
+    settings.highlightColor;
+  (document.getElementById('show-minimap') as HTMLInputElement).checked =
+    settings.showMinimap;
+  (document.getElementById('sidebar-position') as HTMLSelectElement).value =
+    settings.sidebarPosition;
+
   // Keyboard shortcuts
-  (document.getElementById('create-bookmark-shortcut') as HTMLInputElement).value = settings.keyboardShortcuts.createBookmark;
-  (document.getElementById('next-bookmark-shortcut') as HTMLInputElement).value = settings.keyboardShortcuts.nextBookmark;
-  (document.getElementById('prev-bookmark-shortcut') as HTMLInputElement).value = settings.keyboardShortcuts.prevBookmark;
-  (document.getElementById('show-sidebar-shortcut') as HTMLInputElement).value = settings.keyboardShortcuts.showSidebar;
-  
+  (
+    document.getElementById('create-bookmark-shortcut') as HTMLInputElement
+  ).value = settings.keyboardShortcuts.createBookmark;
+  (
+    document.getElementById('next-bookmark-shortcut') as HTMLInputElement
+  ).value = settings.keyboardShortcuts.nextBookmark;
+  (
+    document.getElementById('prev-bookmark-shortcut') as HTMLInputElement
+  ).value = settings.keyboardShortcuts.prevBookmark;
+  (document.getElementById('show-sidebar-shortcut') as HTMLInputElement).value =
+    settings.keyboardShortcuts.showSidebar;
+
   // Behavior settings
-  (document.getElementById('auto-save') as HTMLInputElement).checked = settings.autoSave;
-  (document.getElementById('context-menu') as HTMLInputElement).checked = settings.contextMenu;
-  (document.getElementById('floating-button') as HTMLInputElement).checked = settings.floatingButton;
-  
+  (document.getElementById('auto-save') as HTMLInputElement).checked =
+    settings.autoSave;
+  (document.getElementById('context-menu') as HTMLInputElement).checked =
+    settings.contextMenu;
+  (document.getElementById('floating-button') as HTMLInputElement).checked =
+    settings.floatingButton;
+
   // Update color preview
   updateColorPreview(settings.highlightColor);
 }
@@ -121,27 +134,39 @@ function updateColorPreview(color: string): void {
  */
 function setupEventListeners(): void {
   // Save settings button
-  document.getElementById('save-settings')?.addEventListener('click', handleSaveSettings);
-  
+  document
+    .getElementById('save-settings')
+    ?.addEventListener('click', handleSaveSettings);
+
   // Reset to defaults button
-  document.getElementById('reset-defaults')?.addEventListener('click', handleResetDefaults);
-  
+  document
+    .getElementById('reset-defaults')
+    ?.addEventListener('click', handleResetDefaults);
+
   // Export bookmarks button
-  document.getElementById('export-bookmarks')?.addEventListener('click', handleExportBookmarks);
-  
+  document
+    .getElementById('export-bookmarks')
+    ?.addEventListener('click', handleExportBookmarks);
+
   // Import bookmarks trigger
-  document.getElementById('import-trigger')?.addEventListener('click', handleImportTrigger);
-  document.getElementById('import-bookmarks')?.addEventListener('change', handleImportBookmarks);
-  
+  document
+    .getElementById('import-trigger')
+    ?.addEventListener('click', handleImportTrigger);
+  document
+    .getElementById('import-bookmarks')
+    ?.addEventListener('change', handleImportBookmarks);
+
   // Clear all data button
-  document.getElementById('clear-all-data')?.addEventListener('click', handleClearAllData);
-  
+  document
+    .getElementById('clear-all-data')
+    ?.addEventListener('click', handleClearAllData);
+
   // Highlight color change
-  document.getElementById('highlight-color')?.addEventListener('input', (e) => {
+  document.getElementById('highlight-color')?.addEventListener('input', e => {
     const color = (e.target as HTMLInputElement).value;
     updateColorPreview(color);
   });
-  
+
   // Auto-save on form changes (if enabled)
   document.querySelectorAll('input, select').forEach(element => {
     element.addEventListener('change', handleFormChange);
@@ -152,7 +177,8 @@ function setupEventListeners(): void {
  * Handle form changes for auto-save functionality
  */
 function handleFormChange(): void {
-  const autoSave = (document.getElementById('auto-save') as HTMLInputElement).checked;
+  const autoSave = (document.getElementById('auto-save') as HTMLInputElement)
+    .checked;
   if (autoSave) {
     // Debounced auto-save (implemented in later task)
     console.log('Auto-save triggered');
@@ -165,9 +191,9 @@ function handleFormChange(): void {
 async function handleSaveSettings(): Promise<void> {
   try {
     const settings = collectFormData();
-    
+
     await chrome.storage.local.set({ settings });
-    
+
     showSaveStatus('Settings saved successfully', 'success');
     console.log('Settings saved:', settings);
   } catch (error) {
@@ -181,18 +207,35 @@ async function handleSaveSettings(): Promise<void> {
  */
 function collectFormData(): ExtensionSettings {
   return {
-    highlightColor: (document.getElementById('highlight-color') as HTMLInputElement).value,
-    showMinimap: (document.getElementById('show-minimap') as HTMLInputElement).checked,
-    sidebarPosition: (document.getElementById('sidebar-position') as HTMLSelectElement).value as 'left' | 'right',
+    highlightColor: (
+      document.getElementById('highlight-color') as HTMLInputElement
+    ).value,
+    showMinimap: (document.getElementById('show-minimap') as HTMLInputElement)
+      .checked,
+    sidebarPosition: (
+      document.getElementById('sidebar-position') as HTMLSelectElement
+    ).value as 'left' | 'right',
     keyboardShortcuts: {
-      createBookmark: (document.getElementById('create-bookmark-shortcut') as HTMLInputElement).value,
-      nextBookmark: (document.getElementById('next-bookmark-shortcut') as HTMLInputElement).value,
-      prevBookmark: (document.getElementById('prev-bookmark-shortcut') as HTMLInputElement).value,
-      showSidebar: (document.getElementById('show-sidebar-shortcut') as HTMLInputElement).value,
+      createBookmark: (
+        document.getElementById('create-bookmark-shortcut') as HTMLInputElement
+      ).value,
+      nextBookmark: (
+        document.getElementById('next-bookmark-shortcut') as HTMLInputElement
+      ).value,
+      prevBookmark: (
+        document.getElementById('prev-bookmark-shortcut') as HTMLInputElement
+      ).value,
+      showSidebar: (
+        document.getElementById('show-sidebar-shortcut') as HTMLInputElement
+      ).value,
     },
-    autoSave: (document.getElementById('auto-save') as HTMLInputElement).checked,
-    contextMenu: (document.getElementById('context-menu') as HTMLInputElement).checked,
-    floatingButton: (document.getElementById('floating-button') as HTMLInputElement).checked,
+    autoSave: (document.getElementById('auto-save') as HTMLInputElement)
+      .checked,
+    contextMenu: (document.getElementById('context-menu') as HTMLInputElement)
+      .checked,
+    floatingButton: (
+      document.getElementById('floating-button') as HTMLInputElement
+    ).checked,
   };
 }
 
@@ -204,7 +247,7 @@ async function handleResetDefaults(): Promise<void> {
     try {
       populateForm(DEFAULT_SETTINGS);
       await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
-      
+
       showSaveStatus('Settings reset to defaults', 'success');
       console.log('Settings reset to defaults');
     } catch (error) {
@@ -221,16 +264,16 @@ async function handleExportBookmarks(): Promise<void> {
   try {
     const result = await chrome.storage.local.get('bookmarks');
     const bookmarks = result.bookmarks || [];
-    
+
     const dataStr = JSON.stringify(bookmarks, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    
+
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
     link.download = `chatmarks-bookmarks-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
-    
+
     URL.revokeObjectURL(url);
     showSaveStatus('Bookmarks exported successfully', 'success');
   } catch (error) {
@@ -243,7 +286,9 @@ async function handleExportBookmarks(): Promise<void> {
  * Handle import trigger button click
  */
 function handleImportTrigger(): void {
-  const fileInput = document.getElementById('import-bookmarks') as HTMLInputElement;
+  const fileInput = document.getElementById(
+    'import-bookmarks'
+  ) as HTMLInputElement;
   fileInput.click();
 }
 
@@ -253,44 +298,52 @@ function handleImportTrigger(): void {
 async function handleImportBookmarks(event: Event): Promise<void> {
   const fileInput = event.target as HTMLInputElement;
   const file = fileInput.files?.[0];
-  
+
   if (!file) return;
-  
+
   try {
     const text = await file.text();
     const bookmarks = JSON.parse(text);
-    
+
     // Validate bookmark data structure (basic validation)
     if (!Array.isArray(bookmarks)) {
       throw new Error('Invalid bookmark data format');
     }
-    
+
     // Confirm import
-    const confirmImport = confirm(`Import ${bookmarks.length} bookmarks? This will merge with existing bookmarks.`);
+    const confirmImport = confirm(
+      `Import ${bookmarks.length} bookmarks? This will merge with existing bookmarks.`
+    );
     if (!confirmImport) return;
-    
+
     // Get existing bookmarks
     const result = await chrome.storage.local.get('bookmarks');
     const existingBookmarks = result.bookmarks || [];
-    
+
     // Merge bookmarks (avoid duplicates by ID)
     const mergedBookmarks = [...existingBookmarks];
     let importCount = 0;
-    
+
     for (const bookmark of bookmarks) {
       if (!mergedBookmarks.find(b => b.id === bookmark.id)) {
         mergedBookmarks.push(bookmark);
         importCount++;
       }
     }
-    
+
     // Save merged bookmarks
     await chrome.storage.local.set({ bookmarks: mergedBookmarks });
-    
-    showSaveStatus(`Successfully imported ${importCount} new bookmarks`, 'success');
+
+    showSaveStatus(
+      `Successfully imported ${importCount} new bookmarks`,
+      'success'
+    );
   } catch (error) {
     console.error('Failed to import bookmarks:', error);
-    showSaveStatus('Failed to import bookmarks. Please check the file format.', 'error');
+    showSaveStatus(
+      'Failed to import bookmarks. Please check the file format.',
+      'error'
+    );
   }
 }
 
@@ -301,16 +354,16 @@ async function handleClearAllData(): Promise<void> {
   const confirmClear = confirm(
     'Are you sure you want to delete ALL bookmarks? This action cannot be undone.'
   );
-  
+
   if (!confirmClear) return;
-  
+
   // Double confirmation for safety
   const doubleConfirm = confirm(
     'This will permanently delete all your bookmarks. Are you absolutely sure?'
   );
-  
+
   if (!doubleConfirm) return;
-  
+
   try {
     await chrome.storage.local.remove('bookmarks');
     showSaveStatus('All bookmarks have been deleted', 'success');
@@ -326,10 +379,10 @@ async function handleClearAllData(): Promise<void> {
 function showSaveStatus(message: string, type: 'success' | 'error'): void {
   const statusElement = document.getElementById('save-status');
   if (!statusElement) return;
-  
+
   statusElement.textContent = message;
   statusElement.className = `save-status ${type}`;
-  
+
   // Clear status after 3 seconds
   setTimeout(() => {
     statusElement.textContent = '';

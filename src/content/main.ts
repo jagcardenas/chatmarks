@@ -1,14 +1,17 @@
 /**
  * Main Content Script Entry Point
- * 
+ *
  * Initializes the bookmark system on supported AI platforms.
  * Detects the current platform and sets up appropriate adapters and event listeners.
  */
 
 import './styles.css';
-import { Platform, SelectionRange } from '../types/bookmark';
+import { Platform, SelectionRange, TextAnchor } from '../types/bookmark';
 import { MessageType, ExtensionMessage } from '../types/messages';
-import { TextSelectionManager, PlatformTextSelection } from '../utils/text-selection';
+import {
+  TextSelectionManager,
+  PlatformTextSelection,
+} from '../utils/text-selection';
 
 // Global instances for text selection management
 let selectionManager: TextSelectionManager;
@@ -20,38 +23,53 @@ let dialogContainerEl: HTMLDivElement | null = null;
 let dialogOverlayEl: HTMLDivElement | null = null;
 
 /**
+ * Creates a basic anchor for selections without full anchor data
+ */
+function createBasicAnchor(selection: SelectionRange): TextAnchor {
+  return {
+    selectedText: selection.text,
+    startOffset: selection.startOffset,
+    endOffset: selection.endOffset,
+    xpathSelector: '',
+    messageId: generateMessageId(),
+    contextBefore: selection.contextBefore,
+    contextAfter: selection.contextAfter,
+    checksum: '',
+  };
+}
+
+/**
  * Initialize the content script based on detected platform
  */
 async function initializeContentScript(): Promise<void> {
   try {
     currentPlatform = detectCurrentPlatform();
-    
+
     if (!currentPlatform) {
       console.log('Chatmarks: Platform not supported');
       return;
     }
 
     console.log(`Chatmarks: Initializing on ${currentPlatform} platform`);
-    
+
     // Initialize text selection managers
     selectionManager = new TextSelectionManager();
     platformSelection = new PlatformTextSelection();
-    
+
     // Set up selection event listeners
     setupSelectionListeners();
-    
+
     // Set up keyboard shortcuts
     setupKeyboardShortcuts();
-    
+
     // Initialize platform-specific adapter (will be implemented in later tasks)
     // const adapter = await createPlatformAdapter(currentPlatform);
-    
+
     // Notify background script that platform is ready
     chrome.runtime.sendMessage({
       type: MessageType.PLATFORM_DETECTED,
-      data: { platform: currentPlatform }
+      data: { platform: currentPlatform },
     } as ExtensionMessage);
-    
   } catch (error) {
     console.error('Chatmarks: Failed to initialize content script:', error);
   }
@@ -62,15 +80,18 @@ async function initializeContentScript(): Promise<void> {
  */
 function detectCurrentPlatform(): Platform | null {
   const hostname = window.location.hostname;
-  
-  if (hostname.includes('chatgpt.com') || hostname.includes('chat.openai.com')) {
+
+  if (
+    hostname.includes('chatgpt.com') ||
+    hostname.includes('chat.openai.com')
+  ) {
     return 'chatgpt';
   } else if (hostname.includes('claude.ai')) {
     return 'claude';
   } else if (hostname.includes('x.com') || hostname.includes('grok.x.ai')) {
     return 'grok';
   }
-  
+
   return null;
 }
 
@@ -88,8 +109,9 @@ function setupSelectionListeners(): void {
 function handleSelectionChange(): void {
   if (!selectionManager || !currentPlatform) return;
 
-  const selectionData = platformSelection.getSelectionForPlatform(currentPlatform);
-  
+  const selectionData =
+    platformSelection.getSelectionForPlatform(currentPlatform);
+
   if (!selectionData) {
     // Hide any visible bookmark creation UI
     hideBookmarkCreationUI();
@@ -101,7 +123,7 @@ function handleSelectionChange(): void {
     text: selectionData.text,
     anchor: selectionData.anchor,
     platform: currentPlatform,
-    boundingRect: selectionData.boundingRect
+    boundingRect: selectionData.boundingRect,
   });
 
   // Store current selection for bookmark creation
@@ -146,7 +168,7 @@ function showBookmarkCreationUI(event: MouseEvent): void {
     floatingButtonEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
     floatingButtonEl.style.cursor = 'pointer';
     floatingButtonEl.style.userSelect = 'none';
-    floatingButtonEl.addEventListener('mousedown', (e) => e.preventDefault());
+    floatingButtonEl.addEventListener('mousedown', e => e.preventDefault());
     floatingButtonEl.addEventListener('click', () => {
       openBookmarkDialog();
     });
@@ -199,30 +221,11 @@ function handleKeyboardShortcut(event: KeyboardEvent): void {
 
 /**
  * Create a bookmark from the current text selection
+ * TODO: This will be implemented in Task 9 - Basic Bookmark CRUD Operations
  */
-// TODO: Implement bookmark creation from selection
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function createBookmarkFromSelection(): void {
-  if (!currentSelection || !currentPlatform) {
-    console.warn('Chatmarks: No selection or platform available for bookmark creation');
-    return;
-  }
-
-  // Extract conversation and message IDs from current page
-  const conversationId = extractConversationId();
-  const messageId = currentSelection.anchor.messageId || generateMessageId();
-
-  console.log('Chatmarks: Creating bookmark with data:', {
-    platform: currentPlatform,
-    conversationId,
-    messageId,
-    selectedText: currentSelection.text,
-    anchor: currentSelection.anchor
-  });
-
-  // Placeholder for actual bookmark creation (Task 9)
-  // This will send the bookmark data to background script for storage
-}
+// function createBookmarkFromSelection(): void {
+//   Implementation will be added in future tasks
+// }
 
 function isEventWithinExtensionUI(target: EventTarget | null): boolean {
   if (!target) return false;
@@ -242,7 +245,7 @@ function openBookmarkDialog(): void {
     dialogOverlayEl.style.inset = '0';
     dialogOverlayEl.style.background = 'rgba(0,0,0,0.2)';
     dialogOverlayEl.style.zIndex = '2147483646';
-    dialogOverlayEl.addEventListener('click', (e) => {
+    dialogOverlayEl.addEventListener('click', e => {
       if (e.target === dialogOverlayEl) closeBookmarkDialog();
     });
     document.body.appendChild(dialogOverlayEl);
@@ -347,8 +350,14 @@ function openBookmarkDialog(): void {
   const vh = window.innerHeight;
   const dlgWidth = Math.min(480, Math.max(320, Math.floor(vw * 0.35)));
   const dlgHeight = 220;
-  const left = Math.min(Math.max(12, rect.left + rect.width / 2 - dlgWidth / 2), vw - dlgWidth - 12);
-  const top = Math.min(Math.max(12, rect.top - dlgHeight - 12), vh - dlgHeight - 12);
+  const left = Math.min(
+    Math.max(12, rect.left + rect.width / 2 - dlgWidth / 2),
+    vw - dlgWidth - 12
+  );
+  const top = Math.min(
+    Math.max(12, rect.top - dlgHeight - 12),
+    vh - dlgHeight - 12
+  );
   dialogContainerEl.style.width = `${dlgWidth}px`;
   dialogContainerEl.style.left = `${left}px`;
   dialogContainerEl.style.top = `${top}px`;
@@ -368,20 +377,20 @@ function clearCurrentSelection(): void {
 async function saveBookmark(note: string): Promise<void> {
   if (!currentSelection || !currentPlatform) return;
   const conversationId = extractConversationId();
-  const messageId = currentSelection.anchor.messageId || generateMessageId();
+  const messageId = currentSelection.anchor?.messageId || generateMessageId();
   const payload = {
     platform: currentPlatform,
     conversationId,
     messageId,
     selectedText: currentSelection.text,
     note,
-    anchor: currentSelection.anchor,
+    anchor: currentSelection.anchor || createBasicAnchor(currentSelection),
   };
 
   try {
     const response = await chrome.runtime.sendMessage({
       type: MessageType.CREATE_BOOKMARK,
-      data: payload
+      data: payload,
     } as ExtensionMessage);
     if (!response?.success) {
       console.warn('Chatmarks: Failed to save bookmark', response?.error);
@@ -399,11 +408,11 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     case MessageType.CREATE_BOOKMARK_FROM_CONTEXT:
       handleContextMenuBookmarkCreation(message.data);
       break;
-      
+
     case MessageType.NAVIGATE_TO_BOOKMARK:
       handleBookmarkNavigation(message.data);
       break;
-      
+
     default:
       console.warn('Chatmarks: Unknown message type:', message.type);
   }
@@ -414,7 +423,10 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
  */
 function handleContextMenuBookmarkCreation(data: any): void {
   // Placeholder for context menu bookmark creation (Task 14)
-  console.log('Chatmarks: Would create bookmark from context menu:', data.selectionText);
+  console.log(
+    'Chatmarks: Would create bookmark from context menu:',
+    data.selectionText
+  );
 }
 
 /**
@@ -430,19 +442,21 @@ function handleBookmarkNavigation(data: any): void {
  */
 function extractConversationId(): string {
   const url = window.location.href;
-  
+
   // ChatGPT URL patterns: https://chatgpt.com/c/[conversation-id] or https://chat.openai.com/c/[conversation-id]
-  const chatGptMatch = url.match(/(?:chatgpt\.com|chat\.openai\.com)\/c\/([^/?]+)/);
+  const chatGptMatch = url.match(
+    /(?:chatgpt\.com|chat\.openai\.com)\/c\/([^/?]+)/
+  );
   if (chatGptMatch) return chatGptMatch[1] || '';
-  
+
   // Claude URL pattern: https://claude.ai/chat/[conversation-id]
   const claudeMatch = url.match(/claude\.ai\/chat\/([^/?]+)/);
   if (claudeMatch) return claudeMatch[1] || '';
-  
+
   // Grok patterns (will be refined when platform adapter is implemented)
   const grokMatch = url.match(/x\.com.*\/([^/?]+)/);
   if (grokMatch) return grokMatch[1] || '';
-  
+
   // Fallback to URL hash or generate from timestamp
   return generateConversationId();
 }
@@ -463,11 +477,11 @@ function generateConversationId(): string {
 function generateMessageId(): string {
   // Use current selection and timestamp to create a unique message ID
   if (currentSelection) {
-    const textHash = currentSelection.anchor.checksum;
+    const textHash = currentSelection.anchor?.checksum || '';
     const timestamp = Date.now();
     return `msg-${textHash}-${timestamp}`;
   }
-  
+
   return `msg-${Date.now()}`;
 }
 
