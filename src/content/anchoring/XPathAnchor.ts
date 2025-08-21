@@ -92,7 +92,7 @@ export class XPathAnchor {
       );
 
       return result.singleNodeValue as Element;
-    } catch (error) {
+    } catch {
       // XPath evaluation failed - likely due to invalid syntax or DOM changes
       return null;
     }
@@ -126,7 +126,7 @@ export class XPathAnchor {
 
     // Try to evaluate the XPath to ensure it's syntactically valid
     try {
-      const result = this.document.evaluate(
+      const _result = this.document.evaluate(
         xpath,
         this.document,
         null,
@@ -136,7 +136,7 @@ export class XPathAnchor {
 
       // XPath is syntactically valid if evaluation doesn't throw
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -268,7 +268,7 @@ export class XPathAnchor {
       range.setEnd(textNode, startIndex + textContent.length);
 
       return range;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

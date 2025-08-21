@@ -31,13 +31,10 @@ export class TextSelectionManager {
    * Restore selection for specific platform
    * @deprecated Use TextSelection methods instead
    */
-  restoreSelection(anchor: TextAnchor): boolean {
+  restoreSelection(_anchor: TextAnchor): boolean {
     // Legacy method - returns false for now
     // TODO: Implement restoration logic using anchor data
-    console.warn(
-      'Legacy restoreSelection called with anchor:',
-      anchor.selectedText
-    );
+    // Legacy restoreSelection called - not implemented yet
     return false;
   }
 
@@ -74,15 +71,10 @@ export class PlatformTextSelection {
    */
   async restoreSelectionForPlatform(
     anchor: TextAnchor,
-    platform: Platform
+    _platform: Platform
   ): Promise<boolean> {
     // Could add platform-specific restoration logic here
-    console.warn(
-      'Platform-specific restoration requested for:',
-      platform,
-      'with anchor:',
-      anchor.selectedText
-    );
+    // Platform-specific restoration requested - not implemented yet
     return this.manager.restoreSelection(anchor);
   }
 
@@ -90,9 +82,9 @@ export class PlatformTextSelection {
    * Get selection for specific platform
    * @deprecated Legacy method
    */
-  getSelectionForPlatform(platform: Platform): SelectionRange | null {
+  getSelectionForPlatform(_platform: Platform): SelectionRange | null {
     // Platform-specific selection logic will be implemented here
-    console.warn('Platform-specific selection requested for:', platform);
+    // Platform-specific selection requested
     return this.manager.getCurrentSelection();
   }
 }

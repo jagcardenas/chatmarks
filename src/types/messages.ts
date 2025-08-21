@@ -1,14 +1,14 @@
 /**
  * Message Types and Interfaces for Chrome Extension Inter-Context Communication
- * 
+ *
  * Defines the structure for messages passed between service worker, content scripts,
  * and popup components. Ensures type safety and clear communication protocols.
  */
 
 /**
  * Enumeration of all message types used in the extension
+ * Note: Many enum values are reserved for future implementation phases
  */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 export enum MessageType {
   // Bookmark operations
   CREATE_BOOKMARK = 'CREATE_BOOKMARK',
@@ -16,32 +16,31 @@ export enum MessageType {
   UPDATE_BOOKMARK = 'UPDATE_BOOKMARK',
   DELETE_BOOKMARK = 'DELETE_BOOKMARK',
   GET_BOOKMARKS = 'GET_BOOKMARKS',
-  
+
   // Navigation operations
   NAVIGATE_TO_BOOKMARK = 'NAVIGATE_TO_BOOKMARK',
   SHOW_BOOKMARK_SIDEBAR = 'SHOW_BOOKMARK_SIDEBAR',
   HIDE_BOOKMARK_SIDEBAR = 'HIDE_BOOKMARK_SIDEBAR',
-  
+
   // Settings operations
   GET_SETTINGS = 'GET_SETTINGS',
   SAVE_SETTINGS = 'SAVE_SETTINGS',
-  
+
   // Branching operations (V2)
   CREATE_BRANCH = 'CREATE_BRANCH',
   GET_BRANCHES = 'GET_BRANCHES',
-  
+
   // Platform detection
   DETECT_PLATFORM = 'DETECT_PLATFORM',
-  PLATFORM_DETECTED = 'PLATFORM_DETECTED'
+  PLATFORM_DETECTED = 'PLATFORM_DETECTED',
 }
-/* eslint-enable @typescript-eslint/no-unused-vars */
 
 /**
  * Base interface for all extension messages
  */
 export interface BaseMessage {
   type: MessageType;
-  data?: any;
+  data?: Record<string, unknown>;
   requestId?: string;
 }
 
@@ -49,7 +48,7 @@ export interface BaseMessage {
  * Message interface for bookmark-related operations
  */
 export interface BookmarkMessage extends BaseMessage {
-  type: 
+  type:
     | MessageType.CREATE_BOOKMARK
     | MessageType.CREATE_BOOKMARK_FROM_CONTEXT
     | MessageType.UPDATE_BOOKMARK
@@ -60,8 +59,8 @@ export interface BookmarkMessage extends BaseMessage {
     selectionText?: string;
     note?: string;
     conversationId?: string;
-    anchor?: any;
-    [key: string]: any;
+    anchor?: Record<string, unknown>;
+    [key: string]: unknown;
   };
 }
 
@@ -69,7 +68,7 @@ export interface BookmarkMessage extends BaseMessage {
  * Message interface for navigation operations
  */
 export interface NavigationMessage extends BaseMessage {
-  type: 
+  type:
     | MessageType.NAVIGATE_TO_BOOKMARK
     | MessageType.SHOW_BOOKMARK_SIDEBAR
     | MessageType.HIDE_BOOKMARK_SIDEBAR;
@@ -85,7 +84,7 @@ export interface NavigationMessage extends BaseMessage {
 export interface SettingsMessage extends BaseMessage {
   type: MessageType.GET_SETTINGS | MessageType.SAVE_SETTINGS;
   data?: {
-    settings?: any;
+    settings?: Record<string, unknown>;
   };
 }
 
@@ -94,11 +93,15 @@ export interface SettingsMessage extends BaseMessage {
  */
 export interface MessageResponse {
   success: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
   error?: string;
 }
 
 /**
  * Union type for all possible message types
  */
-export type ExtensionMessage = BookmarkMessage | NavigationMessage | SettingsMessage | BaseMessage;
+export type ExtensionMessage =
+  | BookmarkMessage
+  | NavigationMessage
+  | SettingsMessage
+  | BaseMessage;

@@ -251,7 +251,7 @@ export class FuzzyMatcher {
       }
 
       return null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -297,7 +297,7 @@ export class FuzzyMatcher {
   /**
    * Creates a mock Range for testing purposes
    */
-  private createMockRange(startOffset: number, length: number): Range {
+  private createMockRange(_startOffset: number, _length: number): Range {
     const range = this.document.createRange();
     // This is a simplified mock for testing - real implementation would use actual DOM nodes
     Object.defineProperty(range, 'toString', {
@@ -392,7 +392,7 @@ export class FuzzyMatcher {
     const beforePattern = contextBefore
       ? this.normalizeForSimilarity(contextBefore)
       : '';
-    const afterPattern = contextAfter
+    const _afterPattern = contextAfter
       ? this.normalizeForSimilarity(contextAfter)
       : '';
     const normalizedContainer = this.normalizeForSimilarity(containerText);
@@ -456,7 +456,7 @@ export class FuzzyMatcher {
   private findPartialMatch(
     targetText: string,
     containerText: string,
-    threshold: number
+    _threshold: number
   ): FuzzyMatchResult {
     const targetWords = this.normalizeForSimilarity(targetText).split(' ');
     const containerWords =

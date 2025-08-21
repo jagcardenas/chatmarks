@@ -1,22 +1,27 @@
 /**
  * Service Worker for Chatmarks Chrome Extension
- * 
+ *
  * Handles background tasks, context menu management, and inter-context messaging.
  * Maintains minimal resource usage while providing core extension functionality.
  */
 
-import { BookmarkMessage, MessageType } from '../types/messages';
-import { Bookmark } from '../types/bookmark';
+import {
+  BookmarkMessage,
+  MessageType,
+  ExtensionMessage,
+  MessageResponse,
+} from '../types/messages';
+import { Bookmark, Platform, TextAnchor } from '../types/bookmark';
 
 /**
  * Initialize extension on installation
  */
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Chatmarks extension installed');
-  
+  // Extension installed - initialize core functionality
+
   // Set up context menu items
   setupContextMenus();
-  
+
   // Initialize default settings
   initializeDefaultSettings(); //TODO: Check if await need or why async is needed here
 });
@@ -32,8 +37,8 @@ function setupContextMenus(): void {
     documentUrlPatterns: [
       'https://chatgpt.com/*',
       'https://claude.ai/*',
-      'https://grok.x.ai/*'
-    ]
+      'https://grok.x.ai/*',
+    ],
   });
 }
 
@@ -47,10 +52,10 @@ async function initializeDefaultSettings(): Promise<void> {
       createBookmark: 'Ctrl+B',
       nextBookmark: 'Alt+ArrowDown',
       prevBookmark: 'Alt+ArrowUp',
-      showSidebar: 'Ctrl+Shift+B'
+      showSidebar: 'Ctrl+Shift+B',
     },
     autoSave: true,
-    showMinimap: true
+    showMinimap: true,
   };
 
   await chrome.storage.local.set({ settings: defaultSettings });
@@ -64,7 +69,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     // Send message to content script to create bookmark
     chrome.tabs.sendMessage(tab.id, {
       type: MessageType.CREATE_BOOKMARK_FROM_CONTEXT,
-      data: { selectionText: info.selectionText }
+      data: { selectionText: info.selectionText },
     } as BookmarkMessage);
   }
 });
@@ -72,93 +77,123 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 /**
  * Handle messages from content scripts and popup
  */
-chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
-  switch (message.type) {
-    case MessageType.GET_SETTINGS:
-      handleGetSettings(sendResponse);
-      return true; // Keep message channel open for async response
+chrome.runtime.onMessage.addListener(
+  (
+    message: ExtensionMessage,
+    sender,
+    sendResponse: (response: MessageResponse) => void
+  ) => {
+    switch (message.type) {
+      case MessageType.GET_SETTINGS:
+        handleGetSettings(sendResponse);
+        return true; // Keep message channel open for async response
 
-    case MessageType.SAVE_SETTINGS:
-      handleSaveSettings(message.data, sendResponse);
-      return true;
+      case MessageType.SAVE_SETTINGS:
+        handleSaveSettings(message.data || {}, sendResponse);
+        return true;
 
-    case MessageType.GET_BOOKMARKS:
-      handleGetBookmarks(message.data, sendResponse);
-      return true;
+      case MessageType.GET_BOOKMARKS:
+        handleGetBookmarks(message.data || {}, sendResponse);
+        return true;
 
-    case MessageType.CREATE_BOOKMARK:
-      handleCreateBookmark(message.data, sendResponse);
-      return true;
+      case MessageType.CREATE_BOOKMARK:
+        handleCreateBookmark(message.data || {}, sendResponse);
+        return true;
 
-    default:
-      console.warn('Unknown message type:', message.type);
-      return false;
+      default:
+        // Unknown message type - ignoring
+        return false;
+    }
   }
-});
+);
 
 /**
  * Handle settings retrieval requests
  */
-async function handleGetSettings(sendResponse: (response: any) => void): Promise<void> {
+async function handleGetSettings(
+  sendResponse: (response: MessageResponse) => void
+): Promise<void> {
   try {
     const result = await chrome.storage.local.get('settings');
     sendResponse({ success: true, data: result.settings });
   } catch (error) {
-    sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 }
 
 /**
  * Handle settings save requests
  */
-async function handleSaveSettings(settings: any, sendResponse: (response: any) => void): Promise<void> {
+async function handleSaveSettings(
+  settings: Record<string, unknown>,
+  sendResponse: (response: MessageResponse) => void
+): Promise<void> {
   try {
     await chrome.storage.local.set({ settings });
     sendResponse({ success: true });
   } catch (error) {
-    sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 }
 
 /**
  * Handle bookmark retrieval requests
  */
-async function handleGetBookmarks(filters: any, sendResponse: (response: any) => void): Promise<void> {
+async function handleGetBookmarks(
+  filters: Record<string, unknown>,
+  sendResponse: (response: MessageResponse) => void
+): Promise<void> {
   try {
     const result = await chrome.storage.local.get('bookmarks');
     const bookmarks = result.bookmarks || [];
-    
+
     // Apply filters if provided
     let filteredBookmarks = bookmarks;
     if (filters?.conversationId) {
-      filteredBookmarks = bookmarks.filter((b: any) => b.conversationId === filters.conversationId);
+      filteredBookmarks = bookmarks.filter(
+        (b: Bookmark) => b.conversationId === filters.conversationId
+      );
     }
-    
+
     sendResponse({ success: true, data: filteredBookmarks });
   } catch (error) {
-    sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 }
 
 /**
  * Handle create bookmark requests (mocked persistence in chrome.storage.local)
  */
-async function handleCreateBookmark(data: any, sendResponse: (response: any) => void): Promise<void> {
+async function handleCreateBookmark(
+  data: Record<string, unknown>,
+  sendResponse: (response: MessageResponse) => void
+): Promise<void> {
   try {
     const nowIso = new Date().toISOString();
-    const id = (globalThis as any).crypto?.randomUUID ? crypto.randomUUID() : `bkm-${Date.now()}-${Math.floor(Math.random()*1e6)}`;
+    const id = (globalThis as any).crypto?.randomUUID
+      ? crypto.randomUUID()
+      : `bkm-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
     const newBookmark: Bookmark = {
       id,
-      platform: data.platform,
-      conversationId: data.conversationId,
-      messageId: data.messageId,
-      anchor: data.anchor,
-      note: data.note || '',
-      tags: data.tags || [],
+      platform: data.platform as Platform,
+      conversationId: data.conversationId as string,
+      messageId: data.messageId as string,
+      anchor: data.anchor as TextAnchor,
+      note: (data.note as string) || '',
+      tags: (data.tags as string[]) || [],
       created: nowIso,
       updated: nowIso,
-      color: data.color || '#ffeb3b'
+      color: (data.color as string) || '#ffeb3b',
     };
 
     const existing = await chrome.storage.local.get('bookmarks');
@@ -166,8 +201,14 @@ async function handleCreateBookmark(data: any, sendResponse: (response: any) => 
     bookmarks.push(newBookmark);
     await chrome.storage.local.set({ bookmarks });
 
-    sendResponse({ success: true, data: newBookmark });
+    sendResponse({
+      success: true,
+      data: newBookmark as unknown as Record<string, unknown>,
+    });
   } catch (error) {
-    sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 }

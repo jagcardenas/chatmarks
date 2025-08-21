@@ -778,7 +778,7 @@ describe('AnchorSystem', () => {
 
       // Should still attempt resolution (may fail but shouldn't throw)
       expect(() => {
-        const result = anchorSystem.resolveAnchor(anchor);
+        anchorSystem.resolveAnchor(anchor);
         // Result may be null, but should not throw
       }).not.toThrow();
     });

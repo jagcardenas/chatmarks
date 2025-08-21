@@ -42,10 +42,10 @@ describe('TextSelection', () => {
     mockSelection = {
       _rangeCount: 1,
       _isCollapsed: false,
-      get rangeCount() {
+      get rangeCount(): number {
         return this._rangeCount;
       },
-      get isCollapsed() {
+      get isCollapsed(): boolean {
         return this._isCollapsed;
       },
       getRangeAt: jest.fn(() => mockRange),

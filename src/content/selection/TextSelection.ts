@@ -11,7 +11,7 @@ import { SelectionRange } from '../../types/bookmark';
  * Main class for text selection operations
  */
 export class TextSelection {
-  private selectionListeners: Set<(selection: SelectionRange | null) => void>;
+  private selectionListeners: Set<(_selection: SelectionRange | null) => void>;
   private debounceTimer: ReturnType<typeof setTimeout> | null;
   private readonly DEBOUNCE_DELAY = 50;
   private readonly CONTEXT_LENGTH = 50;
@@ -181,7 +181,7 @@ export class TextSelection {
    * Adds a listener for selection change events with debouncing
    */
   addSelectionChangeListener(
-    listener: (selection: SelectionRange | null) => void
+    listener: (_selection: SelectionRange | null) => void
   ): () => void {
     this.selectionListeners.add(listener);
 

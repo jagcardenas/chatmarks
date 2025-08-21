@@ -534,7 +534,7 @@ export class AnchorSystem {
         default:
           return null;
       }
-    } catch (error) {
+    } catch {
       // Strategy failed, return null to try next strategy
       return null;
     }

@@ -117,7 +117,7 @@ export class OffsetAnchor {
       }
 
       return null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

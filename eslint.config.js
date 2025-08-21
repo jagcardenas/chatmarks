@@ -3,16 +3,20 @@ const tseslint = require('@typescript-eslint/eslint-plugin');
 const tsparser = require('@typescript-eslint/parser');
 
 module.exports = [
-  js.configs.recommended,
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
     ignores: [
       'node_modules/**',
       'dist/**',
       'build/**',
-      '*.min.js',
       'coverage/**',
+      '*.min.js',
+      '**/*.min.js',
+      'TASK_*.md', // Task documentation files
     ],
+  },
+  js.configs.recommended,
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
     plugins: {
       '@typescript-eslint': tseslint,
     },
@@ -31,13 +35,21 @@ module.exports = [
       },
     },
     rules: {
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-console': 'warn',
       'no-debugger': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
+      'no-unused-vars': 'off', // Use TypeScript version instead
     },
   },
   {

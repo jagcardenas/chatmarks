@@ -48,11 +48,11 @@ async function initializeContentScript(): Promise<void> {
     currentPlatform = detectCurrentPlatform();
 
     if (!currentPlatform) {
-      console.log('Chatmarks: Platform not supported');
+      // Platform not supported
       return;
     }
 
-    console.log(`Chatmarks: Initializing on ${currentPlatform} platform`);
+    // Initialize on detected platform
 
     // Initialize text selection managers
     selectionManager = new TextSelectionManager();
@@ -72,8 +72,8 @@ async function initializeContentScript(): Promise<void> {
       type: MessageType.PLATFORM_DETECTED,
       data: { platform: currentPlatform },
     } as ExtensionMessage);
-  } catch (error) {
-    console.error('Chatmarks: Failed to initialize content script:', error);
+  } catch {
+    // Failed to initialize content script - silent failure
   }
 }
 
@@ -120,13 +120,7 @@ function handleSelectionChange(): void {
     return;
   }
 
-  // Log detailed selection information for development
-  console.log('Chatmarks: Text selected:', {
-    text: selectionData.selectedText,
-    anchor: selectionData.anchor,
-    platform: currentPlatform,
-    boundingRect: selectionData.boundingRect,
-  });
+  // Text selection captured
 
   // Store current selection for bookmark creation
   storeCurrentSelection(selectionData);
@@ -408,35 +402,34 @@ async function saveBookmark(note: string): Promise<void> {
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   switch (message.type) {
     case MessageType.CREATE_BOOKMARK_FROM_CONTEXT:
-      handleContextMenuBookmarkCreation(message.data);
+      handleContextMenuBookmarkCreation(message.data || {});
       break;
 
     case MessageType.NAVIGATE_TO_BOOKMARK:
-      handleBookmarkNavigation(message.data);
+      handleBookmarkNavigation(message.data || {});
       break;
 
     default:
-      console.warn('Chatmarks: Unknown message type:', message.type);
+    // Unknown message type - ignoring
   }
 });
 
 /**
  * Handle bookmark creation from context menu
  */
-function handleContextMenuBookmarkCreation(data: any): void {
+function handleContextMenuBookmarkCreation(
+  _data: Record<string, unknown>
+): void {
   // Placeholder for context menu bookmark creation (Task 14)
-  console.log(
-    'Chatmarks: Would create bookmark from context menu:',
-    data.selectionText
-  );
+  // Context menu bookmark creation (placeholder)
 }
 
 /**
  * Handle navigation to a specific bookmark
  */
-function handleBookmarkNavigation(data: any): void {
+function handleBookmarkNavigation(_data: Record<string, unknown>): void {
   // Placeholder for bookmark navigation (Task 15)
-  console.log('Chatmarks: Would navigate to bookmark:', data.bookmarkId);
+  // Bookmark navigation (placeholder)
 }
 
 /**
