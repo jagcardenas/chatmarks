@@ -94,26 +94,32 @@ export class TextSelectionManager {
           selector += `[@id='${element.id}']`;
         } else {
           // Calculate position among siblings of the same type
-          const siblings = Array.from(element.parentNode?.children || [])
-            .filter(child => child.tagName === element.tagName);
-          
-          if (siblings.length > 1) {
-            const index = siblings.indexOf(element) + 1;
-            selector += `[${index}]`;
+          const parent = element.parentNode;
+          if (parent) {
+            const siblings = Array.from(parent.children)
+              .filter(child => child.tagName === element.tagName);
+            
+            if (siblings.length > 1) {
+              const index = siblings.indexOf(element) + 1;
+              selector += `[${index}]`;
+            }
           }
         }
         
         parts.unshift(selector);
       } else if (currentNode.nodeType === Node.TEXT_NODE) {
         // Handle text nodes by finding their position among text siblings
-        const textSiblings = Array.from(currentNode.parentNode?.childNodes || [])
-          .filter(child => child.nodeType === Node.TEXT_NODE);
-        
-        if (textSiblings.length > 1) {
-          const index = textSiblings.indexOf(currentNode) + 1;
-          parts.unshift(`text()[${index}]`);
-        } else {
-          parts.unshift('text()');
+        const parent = currentNode.parentNode;
+        if (parent) {
+          const textSiblings = Array.from(parent.childNodes)
+            .filter(child => child.nodeType === Node.TEXT_NODE);
+          
+          if (textSiblings.length > 1) {
+            const index = textSiblings.indexOf(currentNode as ChildNode) + 1;
+            parts.unshift(`text()[${index}]`);
+          } else {
+            parts.unshift('text()');
+          }
         }
       }
 
@@ -130,9 +136,7 @@ export class TextSelectionManager {
   private calculateDocumentOffsets(range: Range): { startOffset: number; endOffset: number } {
     const walker = document.createTreeWalker(
       document.body,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
+      NodeFilter.SHOW_TEXT
     );
 
     let charCount = 0;
@@ -278,9 +282,7 @@ export class TextSelectionManager {
   private async restoreByOffset(anchor: TextAnchor): Promise<boolean> {
     const walker = document.createTreeWalker(
       document.body,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
+      NodeFilter.SHOW_TEXT
     );
 
     let charCount = 0;
@@ -375,24 +377,24 @@ export class TextSelectionManager {
    */
   private levenshteinDistance(str1: string, str2: string): number {
     const matrix = Array(str2.length + 1).fill(null).map(() => 
-      Array(str1.length + 1).fill(null)
+      Array(str1.length + 1).fill(0)
     );
 
-    for (let i = 0; i <= str1.length; i++) matrix[0][i] = i;
-    for (let j = 0; j <= str2.length; j++) matrix[j][0] = j;
+    for (let i = 0; i <= str1.length; i++) matrix[0]![i] = i;
+    for (let j = 0; j <= str2.length; j++) matrix[j]![0] = j;
 
     for (let j = 1; j <= str2.length; j++) {
       for (let i = 1; i <= str1.length; i++) {
         const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        matrix[j][i] = Math.min(
-          matrix[j][i - 1] + 1,     // deletion
-          matrix[j - 1][i] + 1,     // insertion
-          matrix[j - 1][i - 1] + indicator // substitution
+        matrix[j]![i] = Math.min(
+          matrix[j]![i - 1] + 1,     // deletion
+          matrix[j - 1]![i] + 1,     // insertion
+          matrix[j - 1]![i - 1] + indicator // substitution
         );
       }
     }
 
-    return matrix[str2.length][str1.length];
+    return matrix[str2.length]![str1.length]!;
   }
 
   /**
@@ -458,9 +460,7 @@ export class TextSelectionManager {
   private createSelectionFromTextPosition(startPos: number, endPos: number, expectedText: string): boolean {
     const walker = document.createTreeWalker(
       document.body,
-      NodeFilter.SHOW_TEXT,
-      null,
-      false
+      NodeFilter.SHOW_TEXT
     );
 
     let charCount = 0;

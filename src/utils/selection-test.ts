@@ -325,5 +325,4 @@ export async function runSelectionTests(): Promise<TestResults> {
   return results;
 }
 
-// Export classes for direct use
-export { SelectionTestSuite };
+// SelectionTestSuite is already exported above
