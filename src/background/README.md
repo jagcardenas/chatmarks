@@ -8,13 +8,14 @@ Contains the service worker that handles extension background tasks, providing p
 
 ## Functionality
 - **Context Menu Management**: Creates and handles right-click bookmark creation options
-- **Inter-Context Messaging**: Routes messages between content scripts, popup, and options pages  
+- **Inter-Context Messaging**: Routes messages between content scripts, popup, and options pages
+- **Bookmark Persistence (mock)**: Handles `CREATE_BOOKMARK` by saving to `chrome.storage.local` under `bookmarks`
 - **Settings Management**: Handles extension settings persistence and retrieval
 - **Extension Lifecycle**: Manages installation, startup, and configuration initialization
 
 ## Integration Points
-- **Content Scripts**: Receives bookmark creation and navigation requests
-- **Popup Interface**: Provides bookmark data and handles user interactions
+- **Content Scripts**: Receives bookmark creation requests (`CREATE_BOOKMARK`) and navigation
+- **Popup Interface**: Provides bookmark data via `GET_BOOKMARKS` and handles user interactions
 - **Options Page**: Manages settings persistence and data export/import
 - **Chrome APIs**: Utilizes storage, contextMenus, tabs, and runtime APIs
 

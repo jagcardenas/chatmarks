@@ -12,11 +12,11 @@ Contains all code that runs in the context of AI platform web pages, handling te
 - **styles.css**: Isolated CSS styles for extension UI elements
 
 ## Functionality
-- **Platform Detection**: Automatically detects ChatGPT, Claude, or Grok and loads appropriate adapter
-- **Text Selection Handling**: Captures user text selections and prepares them for bookmark creation
-- **UI Injection**: Creates and manages floating action buttons, dialogs, sidebar, and visual indicators
-- **Bookmark Management**: Handles creation, navigation, and visual highlighting of bookmarks
-- **Keyboard Shortcuts**: Processes extension-specific keyboard shortcuts (Ctrl+B, etc.)
+- **Platform Detection**: Detects ChatGPT (`chatgpt.com` and `chat.openai.com`) and Claude (`claude.ai`)
+- **Text Selection Handling**: Captures user selections with robust anchoring metadata
+- **UI Injection**: Shows a floating “Bookmark” button and a creation dialog with note field
+- **Bookmark Management**: Sends `CREATE_BOOKMARK` message to background to persist locally
+- **Keyboard Shortcuts**: Cmd/Ctrl+B opens the bookmark dialog when text is selected
 
 ## Integration Points
 - **Background Script**: Communicates via chrome.runtime messaging for settings and storage
