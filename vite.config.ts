@@ -29,9 +29,6 @@ export default defineConfig({
         // Main extension entry points
         popup: resolve(__dirname, 'src/popup/index.html'),
         options: resolve(__dirname, 'src/options/index.html'),
-        
-        // Content script styling
-        'content-styles': resolve(__dirname, 'src/content/styles.css'),
       },
       output: {
         // Ensure consistent naming for Chrome extension compatibility

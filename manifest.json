@@ -19,7 +19,6 @@
         "https://grok.x.ai/*"
       ],
       "js": ["src/content/main.ts"],
-      "css": ["src/content/styles.css"],
       "run_at": "document_end"
     }
   ],

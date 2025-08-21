@@ -5,6 +5,7 @@
  * Detects the current platform and sets up appropriate adapters and event listeners.
  */
 
+import './styles.css';
 import { Platform, SelectionRange } from '../types/bookmark';
 import { MessageType, ExtensionMessage } from '../types/messages';
 import { TextSelectionManager, PlatformTextSelection } from '../utils/text-selection';
