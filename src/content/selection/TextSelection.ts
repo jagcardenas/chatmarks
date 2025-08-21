@@ -53,7 +53,7 @@ export class TextSelection {
     const { contextBefore, contextAfter } = this.extractContext(range);
 
     return {
-      text: this.normalizeText(selection.toString()),
+      selectedText: this.normalizeText(selection.toString()),
       range: range.cloneRange(),
       boundingRect: {
         top: boundingRect.top,
@@ -67,6 +67,9 @@ export class TextSelection {
       contextAfter,
       startOffset: range.startOffset,
       endOffset: range.endOffset,
+      messageId: 'temp-message-id', // TODO: Get from platform adapter
+      conversationId: 'temp-conversation-id', // TODO: Get from platform adapter
+      timestamp: new Date().toISOString(),
     };
   }
 

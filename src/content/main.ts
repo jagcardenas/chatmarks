@@ -27,7 +27,7 @@ let dialogOverlayEl: HTMLDivElement | null = null;
  */
 function createBasicAnchor(selection: SelectionRange): TextAnchor {
   return {
-    selectedText: selection.text,
+    selectedText: selection.selectedText,
     startOffset: selection.startOffset,
     endOffset: selection.endOffset,
     xpathSelector: '',
@@ -35,6 +35,8 @@ function createBasicAnchor(selection: SelectionRange): TextAnchor {
     contextBefore: selection.contextBefore,
     contextAfter: selection.contextAfter,
     checksum: '',
+    confidence: 0.5,
+    strategy: 'xpath',
   };
 }
 
@@ -120,7 +122,7 @@ function handleSelectionChange(): void {
 
   // Log detailed selection information for development
   console.log('Chatmarks: Text selected:', {
-    text: selectionData.text,
+    text: selectionData.selectedText,
     anchor: selectionData.anchor,
     platform: currentPlatform,
     boundingRect: selectionData.boundingRect,
@@ -144,7 +146,7 @@ function handleMouseUp(event: MouseEvent): void {
   // Small delay to ensure selection is finalized
   setTimeout(() => {
     if (isEventWithinExtensionUI(event.target)) return;
-    if (currentSelection && currentSelection.text.trim()) {
+    if (currentSelection && currentSelection.selectedText.trim()) {
       showBookmarkCreationUI(event);
     }
   }, 10);
@@ -275,7 +277,7 @@ function openBookmarkDialog(): void {
     titleEl.style.fontWeight = '600';
 
     const selectedPreview = document.createElement('div');
-    selectedPreview.textContent = `"${currentSelection.text.slice(0, 140)}${currentSelection.text.length > 140 ? '…' : ''}"`;
+    selectedPreview.textContent = `"${currentSelection.selectedText.slice(0, 140)}${currentSelection.selectedText.length > 140 ? '…' : ''}"`;
     selectedPreview.style.fontSize = '12px';
     selectedPreview.style.color = '#4b5563';
     selectedPreview.style.background = '#f9fafb';
@@ -382,7 +384,7 @@ async function saveBookmark(note: string): Promise<void> {
     platform: currentPlatform,
     conversationId,
     messageId,
-    selectedText: currentSelection.text,
+    selectedText: currentSelection.selectedText,
     note,
     anchor: currentSelection.anchor || createBasicAnchor(currentSelection),
   };

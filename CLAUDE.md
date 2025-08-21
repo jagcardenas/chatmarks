@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Chatmarks** is a Chrome browser extension that transforms AI conversations into navigable, annotated documents. The project delivers intelligent bookmarking (V1) and conversation branching (V2) capabilities for ChatGPT, Claude, and Grok platforms.
 
-**Current Status**: Early development phase with basic TypeScript foundation established. The codebase is ready for Chrome extension development transition following the detailed implementation plan in `TASKS.md`.
+**Current Status**: **Task 6 Complete** - Text Selection and Range API implementation finished with comprehensive test coverage. Currently implementing Task 7: Text Anchoring System with fallback strategies. Core bookmark functionality foundation is established.
 
 **Core Value Proposition:**
 - Zero-cost architecture (no servers, no subscriptions)
@@ -59,32 +59,54 @@ npm test -- --verbose --no-cache
 ```
 chatmarks/
 ├── src/
-│   └── index.ts          # Basic bookmark interfaces and functions
+│   ├── content/
+│   │   ├── main.ts              # Main content script entry point
+│   │   └── selection/           # ✅ COMPLETE: Text Selection System
+│   │       ├── TextSelection.ts # Core selection handling (Task 6)
+│   │       └── README.md        # Module documentation
+│   ├── options/
+│   │   └── options.ts           # Extension options page
+│   ├── types/
+│   │   └── bookmark.ts          # Updated type definitions
+│   └── utils/
+│       ├── selection-test.ts    # Selection testing utilities
+│       └── text-selection.ts    # Legacy compatibility layer
 ├── tests/
-│   ├── index.test.ts     # Unit tests for core functions
-│   └── setup.ts          # Jest test configuration
-├── dist/                 # Compiled TypeScript output
-├── package.json          # Dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-├── jest.config.js        # Jest testing configuration
-├── eslint.config.js      # ESLint rules and configuration
-└── TASKS.md              # Detailed 40-task implementation plan
+│   ├── text-selection.test.ts   # ✅ 24 tests, all passing (Task 6)
+│   └── setup.ts                 # Jest configuration
+├── manifest.json                # Chrome extension manifest
+├── package.json                 # Dependencies and scripts
+├── tsconfig.json                # TypeScript configuration
+├── jest.config.js               # Jest testing configuration
+├── eslint.config.js             # ESLint rules and configuration
+└── TASKS.md                     # Detailed 40-task implementation plan
+```
+
+### Next Implementation Phase
+Currently implementing Task 7 - Text Anchoring System:
+```
+src/content/anchoring/           # 🚧 IN PROGRESS: Task 7 Implementation
+├── XPathAnchor.ts              # Primary DOM targeting strategy
+├── OffsetAnchor.ts             # Character offset fallback
+├── FuzzyMatcher.ts             # Text similarity matching
+├── AnchorSystem.ts             # Multi-strategy coordinator
+└── README.md                   # Anchoring system documentation
 ```
 
 ### Planned Chrome Extension Structure
-The project will transition to this structure during Task 1-5 implementation:
+Future structure for remaining tasks:
 ```
 src/
-├── manifest.json         # Extension manifest (Manifest V3)
 ├── background/
-│   └── service-worker.ts # Background service worker
+│   └── service-worker.ts       # Background service worker
 ├── content/
-│   ├── adapters/         # Platform-specific implementations (ChatGPT/Claude/Grok)
-│   ├── anchoring/        # Text anchoring system with fallback strategies
-│   ├── storage/          # Chrome storage + IndexedDB persistence
-│   └── ui/              # Web Components for bookmark interface
-├── popup/               # Extension popup interface
-└── types/              # Shared TypeScript definitions
+│   ├── adapters/               # Platform-specific implementations (ChatGPT/Claude/Grok)
+│   ├── anchoring/              # ✅ Text anchoring system (Task 7)
+│   ├── selection/              # ✅ Text selection system (Task 6)
+│   ├── storage/                # Chrome storage + IndexedDB persistence
+│   └── ui/                     # Web Components for bookmark interface
+├── popup/                      # Extension popup interface
+└── types/                      # Shared TypeScript definitions
 ```
 
 ### Core Systems

@@ -78,7 +78,7 @@ describe('TextSelection', () => {
       const result = textSelection.captureRange();
 
       expect(result).toBeDefined();
-      expect(result?.text).toBe('is th');
+      expect(result?.selectedText).toBe('is th');
       expect(result?.range).toBeDefined();
       expect(result?.boundingRect).toBeDefined();
     });
@@ -94,7 +94,7 @@ describe('TextSelection', () => {
       const result = textSelection.captureRange();
 
       expect(result).toBeDefined();
-      expect(result?.text).toBe('some text. This is th');
+      expect(result?.selectedText).toBe('some text. This is th');
       expect(result?.range).toBeDefined();
     });
 
@@ -132,7 +132,7 @@ describe('TextSelection', () => {
       const result = textSelection.captureRange();
 
       expect(result).toBeDefined();
-      expect(result?.text).toBe('bold text');
+      expect(result?.selectedText).toBe('bold text');
     });
   });
 

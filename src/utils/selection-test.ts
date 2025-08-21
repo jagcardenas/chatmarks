@@ -74,7 +74,7 @@ export class SelectionTestSuite {
         // Test selection capture
         const capturedSelection = this.manager.getCurrentSelection();
 
-        if (capturedSelection && capturedSelection.text === 'test') {
+        if (capturedSelection && capturedSelection.selectedText === 'test') {
           document.body.removeChild(testElement);
           return {
             name: testName,
@@ -119,7 +119,10 @@ export class SelectionTestSuite {
 
         const capturedSelection = this.manager.getCurrentSelection();
 
-        if (capturedSelection && capturedSelection.text.includes('middle')) {
+        if (
+          capturedSelection &&
+          capturedSelection.selectedText.includes('middle')
+        ) {
           document.body.removeChild(testElement);
           return {
             name: testName,
@@ -303,7 +306,8 @@ export class SelectionTestSuite {
           const platformSelection =
             this.platformSelection.getSelectionForPlatform(platform);
           results.push(
-            platformSelection !== null && platformSelection.text === 'Platform'
+            platformSelection !== null &&
+              platformSelection.selectedText === 'Platform'
           );
         }
 

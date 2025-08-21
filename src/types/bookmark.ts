@@ -40,7 +40,18 @@ export interface TextAnchor {
 
   /** SHA-256 checksum of surrounding text for validation */
   checksum: string;
+
+  /** Confidence score (0-1) indicating reliability of this anchor */
+  confidence: number;
+
+  /** Strategy used for this anchor ('xpath' | 'offset' | 'fuzzy') */
+  strategy: AnchorStrategy;
 }
+
+/**
+ * Available anchoring strategies in order of preference
+ */
+export type AnchorStrategy = 'xpath' | 'offset' | 'fuzzy';
 
 /**
  * Complete bookmark data structure
@@ -142,7 +153,7 @@ export interface ValidationResult {
  */
 export interface SelectionRange {
   /** The selected text content */
-  text: string;
+  selectedText: string;
 
   /** The Range object from the browser's selection API */
   range: Range;
@@ -168,6 +179,15 @@ export interface SelectionRange {
 
   /** End offset of the selection */
   endOffset: number;
+
+  /** Message ID where this selection was made */
+  messageId: string;
+
+  /** Conversation ID where this selection was made */
+  conversationId: string;
+
+  /** ISO timestamp when selection was captured */
+  timestamp: string;
 
   /** Text anchor with positioning information (optional for now) */
   anchor?: TextAnchor;
