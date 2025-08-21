@@ -6,7 +6,9 @@
  */
 
 import { TextSelectionManager, PlatformTextSelection } from './text-selection';
-import { Platform, TextAnchor, SelectionRange } from '../types/bookmark';
+import { Platform } from '../types/bookmark';
+// The following imports will be used when implementation is complete
+// import { TextAnchor, SelectionRange } from '../types/bookmark';
 
 /**
  * Test suite for text selection functionality

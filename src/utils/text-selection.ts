@@ -43,7 +43,6 @@ export class TextSelectionManager {
    */
   private createTextAnchor(range: Range, selectedText: string): TextAnchor {
     const startContainer = range.startContainer;
-    const endContainer = range.endContainer;
 
     // Generate XPath selector for the range
     const xpathSelector = this.generateXPathSelector(startContainer);
@@ -144,7 +143,7 @@ export class TextSelectionManager {
     let endOffset = -1;
     let node: Node | null;
 
-    while (node = walker.nextNode()) {
+    while ((node = walker.nextNode())) {
       const nodeText = node.textContent || '';
       
       if (node === range.startContainer) {
@@ -292,7 +291,7 @@ export class TextSelectionManager {
     let endOffset = 0;
     let node: Node | null;
 
-    while (node = walker.nextNode()) {
+    while ((node = walker.nextNode())) {
       const nodeText = node.textContent || '';
       const nodeLength = nodeText.length;
       
@@ -470,7 +469,7 @@ export class TextSelectionManager {
     let endOffset = 0;
     let node: Node | null;
 
-    while (node = walker.nextNode()) {
+    while ((node = walker.nextNode())) {
       const nodeText = node.textContent || '';
       const nodeLength = nodeText.length;
       
@@ -586,8 +585,9 @@ export class PlatformTextSelection {
   /**
    * Restore selection for specific platform
    */
-  async restoreSelectionForPlatform(anchor: TextAnchor, platform: Platform): Promise<boolean> {
+  async restoreSelectionForPlatform(anchor: TextAnchor, _platform: Platform): Promise<boolean> {
     // Could add platform-specific restoration logic here
+    // The _platform parameter will be used for platform-specific logic in future
     return this.manager.restoreSelection(anchor);
   }
 }

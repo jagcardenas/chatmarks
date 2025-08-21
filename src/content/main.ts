@@ -15,6 +15,9 @@ let selectionManager: TextSelectionManager;
 let platformSelection: PlatformTextSelection;
 let currentPlatform: Platform | null = null;
 let currentSelection: SelectionRange | null = null;
+let floatingButtonEl: HTMLButtonElement | null = null;
+let dialogContainerEl: HTMLDivElement | null = null;
+let dialogOverlayEl: HTMLDivElement | null = null;
 
 /**
  * Initialize the content script based on detected platform
@@ -60,7 +63,7 @@ async function initializeContentScript(): Promise<void> {
 function detectCurrentPlatform(): Platform | null {
   const hostname = window.location.hostname;
   
-  if (hostname.includes('chat.openai.com')) {
+  if (hostname.includes('chatgpt.com') || hostname.includes('chat.openai.com')) {
     return 'chatgpt';
   } else if (hostname.includes('claude.ai')) {
     return 'claude';
@@ -118,6 +121,7 @@ function storeCurrentSelection(selectionData: SelectionRange): void {
 function handleMouseUp(event: MouseEvent): void {
   // Small delay to ensure selection is finalized
   setTimeout(() => {
+    if (isEventWithinExtensionUI(event.target)) return;
     if (currentSelection && currentSelection.text.trim()) {
       showBookmarkCreationUI(event);
     }
@@ -128,16 +132,48 @@ function handleMouseUp(event: MouseEvent): void {
  * Show bookmark creation UI near the cursor position
  */
 function showBookmarkCreationUI(event: MouseEvent): void {
-  // Placeholder for bookmark creation UI (Task 11)
-  console.log('Chatmarks: Would show bookmark creation UI at:', event.clientX, event.clientY);
+  if (!floatingButtonEl) {
+    floatingButtonEl = document.createElement('button');
+    floatingButtonEl.textContent = 'Bookmark';
+    floatingButtonEl.style.position = 'fixed';
+    floatingButtonEl.style.zIndex = '2147483647';
+    floatingButtonEl.style.padding = '6px 10px';
+    floatingButtonEl.style.fontSize = '12px';
+    floatingButtonEl.style.border = '1px solid rgba(0,0,0,0.15)';
+    floatingButtonEl.style.borderRadius = '6px';
+    floatingButtonEl.style.background = '#111827';
+    floatingButtonEl.style.color = '#fff';
+    floatingButtonEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+    floatingButtonEl.style.cursor = 'pointer';
+    floatingButtonEl.style.userSelect = 'none';
+    floatingButtonEl.addEventListener('mousedown', (e) => e.preventDefault());
+    floatingButtonEl.addEventListener('click', () => {
+      openBookmarkDialog();
+    });
+    document.body.appendChild(floatingButtonEl);
+  }
+
+  const margin = 8;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const btnWidth = 90;
+  const btnHeight = 30;
+  let left = event.clientX + margin;
+  let top = event.clientY + margin;
+  if (left + btnWidth > vw) left = vw - btnWidth - margin;
+  if (top + btnHeight > vh) top = vh - btnHeight - margin;
+  floatingButtonEl.style.left = `${left}px`;
+  floatingButtonEl.style.top = `${top}px`;
+  floatingButtonEl.style.display = 'block';
 }
 
 /**
  * Hide bookmark creation UI
  */
 function hideBookmarkCreationUI(): void {
-  // Placeholder for hiding UI (Task 11)
-  console.log('Chatmarks: Would hide bookmark creation UI');
+  if (floatingButtonEl) {
+    floatingButtonEl.style.display = 'none';
+  }
 }
 
 /**
@@ -156,7 +192,7 @@ function handleKeyboardShortcut(event: KeyboardEvent): void {
     const selection = window.getSelection();
     if (selection && !selection.isCollapsed) {
       event.preventDefault();
-      createBookmarkFromSelection();
+      openBookmarkDialog();
     }
   }
 }
@@ -164,6 +200,8 @@ function handleKeyboardShortcut(event: KeyboardEvent): void {
 /**
  * Create a bookmark from the current text selection
  */
+// TODO: Implement bookmark creation from selection
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function createBookmarkFromSelection(): void {
   if (!currentSelection || !currentPlatform) {
     console.warn('Chatmarks: No selection or platform available for bookmark creation');
@@ -186,10 +224,177 @@ function createBookmarkFromSelection(): void {
   // This will send the bookmark data to background script for storage
 }
 
+function isEventWithinExtensionUI(target: EventTarget | null): boolean {
+  if (!target) return false;
+  const node = target as Node;
+  if (floatingButtonEl && floatingButtonEl.contains(node)) return true;
+  if (dialogContainerEl && dialogContainerEl.contains(node)) return true;
+  if (dialogOverlayEl && dialogOverlayEl.contains(node)) return true;
+  return false;
+}
+
+function openBookmarkDialog(): void {
+  if (!currentSelection || !currentPlatform) return;
+
+  if (!dialogOverlayEl) {
+    dialogOverlayEl = document.createElement('div');
+    dialogOverlayEl.style.position = 'fixed';
+    dialogOverlayEl.style.inset = '0';
+    dialogOverlayEl.style.background = 'rgba(0,0,0,0.2)';
+    dialogOverlayEl.style.zIndex = '2147483646';
+    dialogOverlayEl.addEventListener('click', (e) => {
+      if (e.target === dialogOverlayEl) closeBookmarkDialog();
+    });
+    document.body.appendChild(dialogOverlayEl);
+  } else {
+    dialogOverlayEl.style.display = 'block';
+  }
+
+  if (!dialogContainerEl) {
+    dialogContainerEl = document.createElement('div');
+    dialogContainerEl.style.position = 'fixed';
+    dialogContainerEl.style.minWidth = '320px';
+    dialogContainerEl.style.maxWidth = '480px';
+    dialogContainerEl.style.background = '#ffffff';
+    dialogContainerEl.style.color = '#111827';
+    dialogContainerEl.style.border = '1px solid rgba(0,0,0,0.1)';
+    dialogContainerEl.style.borderRadius = '8px';
+    dialogContainerEl.style.boxShadow = '0 12px 24px rgba(0,0,0,0.2)';
+    dialogContainerEl.style.zIndex = '2147483647';
+    dialogContainerEl.style.padding = '12px';
+    dialogContainerEl.style.display = 'flex';
+    dialogContainerEl.style.flexDirection = 'column';
+    dialogContainerEl.style.gap = '8px';
+
+    const titleEl = document.createElement('div');
+    titleEl.textContent = 'Create bookmark';
+    titleEl.style.fontSize = '14px';
+    titleEl.style.fontWeight = '600';
+
+    const selectedPreview = document.createElement('div');
+    selectedPreview.textContent = `"${currentSelection.text.slice(0, 140)}${currentSelection.text.length > 140 ? '…' : ''}"`;
+    selectedPreview.style.fontSize = '12px';
+    selectedPreview.style.color = '#4b5563';
+    selectedPreview.style.background = '#f9fafb';
+    selectedPreview.style.border = '1px solid #e5e7eb';
+    selectedPreview.style.borderRadius = '6px';
+    selectedPreview.style.padding = '8px';
+    selectedPreview.style.maxHeight = '96px';
+    selectedPreview.style.overflow = 'auto';
+
+    const noteLabel = document.createElement('label');
+    noteLabel.textContent = 'Note (optional)';
+    noteLabel.style.fontSize = '12px';
+    noteLabel.style.color = '#374151';
+
+    const noteInput = document.createElement('textarea');
+    noteInput.placeholder = 'Add a short note';
+    noteInput.style.width = '100%';
+    noteInput.style.minHeight = '72px';
+    noteInput.style.resize = 'vertical';
+    noteInput.style.fontSize = '12px';
+    noteInput.style.padding = '8px';
+    noteInput.style.border = '1px solid #e5e7eb';
+    noteInput.style.borderRadius = '6px';
+    noteInput.style.outline = 'none';
+
+    const actions = document.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.justifyContent = 'flex-end';
+    actions.style.gap = '8px';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.padding = '6px 10px';
+    cancelBtn.style.fontSize = '12px';
+    cancelBtn.style.border = '1px solid #e5e7eb';
+    cancelBtn.style.borderRadius = '6px';
+    cancelBtn.style.background = '#ffffff';
+    cancelBtn.style.color = '#111827';
+    cancelBtn.addEventListener('click', () => closeBookmarkDialog());
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save Bookmark';
+    saveBtn.style.padding = '6px 10px';
+    saveBtn.style.fontSize = '12px';
+    saveBtn.style.border = '1px solid rgba(0,0,0,0.15)';
+    saveBtn.style.borderRadius = '6px';
+    saveBtn.style.background = '#111827';
+    saveBtn.style.color = '#ffffff';
+    saveBtn.addEventListener('click', async () => {
+      await saveBookmark(noteInput.value.trim());
+      closeBookmarkDialog();
+      hideBookmarkCreationUI();
+      clearCurrentSelection();
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+
+    dialogContainerEl.appendChild(titleEl);
+    dialogContainerEl.appendChild(selectedPreview);
+    dialogContainerEl.appendChild(noteLabel);
+    dialogContainerEl.appendChild(noteInput);
+    dialogContainerEl.appendChild(actions);
+
+    document.body.appendChild(dialogContainerEl);
+  } else {
+    dialogContainerEl.style.display = 'flex';
+  }
+
+  const rect = currentSelection.boundingRect;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const dlgWidth = Math.min(480, Math.max(320, Math.floor(vw * 0.35)));
+  const dlgHeight = 220;
+  const left = Math.min(Math.max(12, rect.left + rect.width / 2 - dlgWidth / 2), vw - dlgWidth - 12);
+  const top = Math.min(Math.max(12, rect.top - dlgHeight - 12), vh - dlgHeight - 12);
+  dialogContainerEl.style.width = `${dlgWidth}px`;
+  dialogContainerEl.style.left = `${left}px`;
+  dialogContainerEl.style.top = `${top}px`;
+}
+
+function closeBookmarkDialog(): void {
+  if (dialogOverlayEl) dialogOverlayEl.style.display = 'none';
+  if (dialogContainerEl) dialogContainerEl.style.display = 'none';
+}
+
+function clearCurrentSelection(): void {
+  currentSelection = null;
+  const sel = window.getSelection();
+  if (sel) sel.removeAllRanges();
+}
+
+async function saveBookmark(note: string): Promise<void> {
+  if (!currentSelection || !currentPlatform) return;
+  const conversationId = extractConversationId();
+  const messageId = currentSelection.anchor.messageId || generateMessageId();
+  const payload = {
+    platform: currentPlatform,
+    conversationId,
+    messageId,
+    selectedText: currentSelection.text,
+    note,
+    anchor: currentSelection.anchor,
+  };
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: MessageType.CREATE_BOOKMARK,
+      data: payload
+    } as ExtensionMessage);
+    if (!response?.success) {
+      console.warn('Chatmarks: Failed to save bookmark', response?.error);
+    }
+  } catch (error) {
+    console.warn('Chatmarks: Error saving bookmark', error);
+  }
+}
+
 /**
  * Listen for messages from background script and popup
  */
-chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   switch (message.type) {
     case MessageType.CREATE_BOOKMARK_FROM_CONTEXT:
       handleContextMenuBookmarkCreation(message.data);
@@ -226,8 +431,8 @@ function handleBookmarkNavigation(data: any): void {
 function extractConversationId(): string {
   const url = window.location.href;
   
-  // ChatGPT URL pattern: https://chat.openai.com/c/[conversation-id]
-  const chatGptMatch = url.match(/chat\.openai\.com\/c\/([^/?]+)/);
+  // ChatGPT URL patterns: https://chatgpt.com/c/[conversation-id] or https://chat.openai.com/c/[conversation-id]
+  const chatGptMatch = url.match(/(?:chatgpt\.com|chat\.openai\.com)\/c\/([^/?]+)/);
   if (chatGptMatch) return chatGptMatch[1] || '';
   
   // Claude URL pattern: https://claude.ai/chat/[conversation-id]

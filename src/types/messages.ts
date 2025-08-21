@@ -8,6 +8,7 @@
 /**
  * Enumeration of all message types used in the extension
  */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export enum MessageType {
   // Bookmark operations
   CREATE_BOOKMARK = 'CREATE_BOOKMARK',
@@ -33,6 +34,7 @@ export enum MessageType {
   DETECT_PLATFORM = 'DETECT_PLATFORM',
   PLATFORM_DETECTED = 'PLATFORM_DETECTED'
 }
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 /**
  * Base interface for all extension messages

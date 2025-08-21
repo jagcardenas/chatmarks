@@ -88,8 +88,8 @@ async function getCurrentConversationBookmarks(allBookmarks: Bookmark[]): Promis
  * Extract conversation ID from URL (basic implementation)
  */
 function extractConversationIdFromUrl(url: string): string | null {
-  // ChatGPT URL pattern: https://chat.openai.com/c/[conversation-id]
-  const chatGptMatch = url.match(/chat\.openai\.com\/c\/([^/?]+)/);
+  // ChatGPT URL patterns: https://chatgpt.com/c/[conversation-id] or https://chat.openai.com/c/[conversation-id]
+  const chatGptMatch = url.match(/(?:chatgpt\.com|chat\.openai\.com)\/c\/([^/?]+)/);
   if (chatGptMatch) return chatGptMatch[1] || null;
 
   // Claude URL pattern: https://claude.ai/chat/[conversation-id]

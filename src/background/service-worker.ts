@@ -6,6 +6,7 @@
  */
 
 import { BookmarkMessage, MessageType } from '../types/messages';
+import { Bookmark } from '../types/bookmark';
 
 /**
  * Initialize extension on installation
@@ -17,7 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
   setupContextMenus();
   
   // Initialize default settings
-  initializeDefaultSettings();
+  initializeDefaultSettings(); //TODO: Check if await need or why async is needed here
 });
 
 /**
@@ -29,9 +30,8 @@ function setupContextMenus(): void {
     title: 'Create Bookmark',
     contexts: ['selection'],
     documentUrlPatterns: [
-      'https://chat.openai.com/*',
+      'https://chatgpt.com/*',
       'https://claude.ai/*',
-      'https://x.com/*',
       'https://grok.x.ai/*'
     ]
   });
@@ -86,6 +86,10 @@ chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
       handleGetBookmarks(message.data, sendResponse);
       return true;
 
+    case MessageType.CREATE_BOOKMARK:
+      handleCreateBookmark(message.data, sendResponse);
+      return true;
+
     default:
       console.warn('Unknown message type:', message.type);
       return false;
@@ -131,6 +135,38 @@ async function handleGetBookmarks(filters: any, sendResponse: (response: any) =>
     }
     
     sendResponse({ success: true, data: filteredBookmarks });
+  } catch (error) {
+    sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+}
+
+/**
+ * Handle create bookmark requests (mocked persistence in chrome.storage.local)
+ */
+async function handleCreateBookmark(data: any, sendResponse: (response: any) => void): Promise<void> {
+  try {
+    const nowIso = new Date().toISOString();
+    const id = (globalThis as any).crypto?.randomUUID ? crypto.randomUUID() : `bkm-${Date.now()}-${Math.floor(Math.random()*1e6)}`;
+
+    const newBookmark: Bookmark = {
+      id,
+      platform: data.platform,
+      conversationId: data.conversationId,
+      messageId: data.messageId,
+      anchor: data.anchor,
+      note: data.note || '',
+      tags: data.tags || [],
+      created: nowIso,
+      updated: nowIso,
+      color: data.color || '#ffeb3b'
+    };
+
+    const existing = await chrome.storage.local.get('bookmarks');
+    const bookmarks: Bookmark[] = existing.bookmarks || [];
+    bookmarks.push(newBookmark);
+    await chrome.storage.local.set({ bookmarks });
+
+    sendResponse({ success: true, data: newBookmark });
   } catch (error) {
     sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
   }

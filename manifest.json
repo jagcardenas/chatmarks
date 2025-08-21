@@ -14,6 +14,7 @@
     {
       "matches": [
         "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://x.com/*",
         "https://grok.x.ai/*"
@@ -35,6 +36,14 @@
     "contextMenus"
   ],
 
+  "host_permissions": [
+    "https://chat.openai.com/*",
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://x.com/*",
+    "https://grok.x.ai/*"
+  ],
+
   "web_accessible_resources": [
     {
       "resources": [
@@ -43,6 +52,7 @@
       ],
       "matches": [
         "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://x.com/*",
         "https://grok.x.ai/*"

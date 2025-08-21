@@ -6,7 +6,7 @@ module.exports = [
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
-    ignores: ['node_modules/**', 'dist/**'],
+    ignores: ['node_modules/**', 'dist/**', 'build/**', '*.min.js'],
     plugins: {
       '@typescript-eslint': tseslint,
     },
@@ -20,6 +20,8 @@ module.exports = [
         ...require('globals').browser,
         ...require('globals').node,
         crypto: 'readonly',
+        chrome: 'readonly',
+        ChildNode: 'readonly',
       },
     },
     rules: {
