@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatmarks Settings</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="options-container">
+    <header class="options-header">
+      <h1>Chatmarks Settings</h1>
+      <p>Configure your AI conversation bookmarking preferences</p>
+    </header>
+    
+    <main class="options-main">
+      <section class="settings-section">
+        <h2>Appearance</h2>
+        
+        <div class="setting-item">
+          <label for="highlight-color">Highlight Color</label>
+          <div class="color-input-group">
+            <input type="color" id="highlight-color" value="#ffeb3b">
+            <span class="color-preview"></span>
+          </div>
+        </div>
+        
+        <div class="setting-item">
+          <label for="show-minimap">Show Minimap</label>
+          <input type="checkbox" id="show-minimap" checked>
+        </div>
+        
+        <div class="setting-item">
+          <label for="sidebar-position">Sidebar Position</label>
+          <select id="sidebar-position">
+            <option value="right">Right</option>
+            <option value="left">Left</option>
+          </select>
+        </div>
+      </section>
+      
+      <section class="settings-section">
+        <h2>Keyboard Shortcuts</h2>
+        
+        <div class="setting-item">
+          <label for="create-bookmark-shortcut">Create Bookmark</label>
+          <input type="text" id="create-bookmark-shortcut" value="Ctrl+B" readonly>
+        </div>
+        
+        <div class="setting-item">
+          <label for="next-bookmark-shortcut">Next Bookmark</label>
+          <input type="text" id="next-bookmark-shortcut" value="Alt+ArrowDown" readonly>
+        </div>
+        
+        <div class="setting-item">
+          <label for="prev-bookmark-shortcut">Previous Bookmark</label>
+          <input type="text" id="prev-bookmark-shortcut" value="Alt+ArrowUp" readonly>
+        </div>
+        
+        <div class="setting-item">
+          <label for="show-sidebar-shortcut">Show Sidebar</label>
+          <input type="text" id="show-sidebar-shortcut" value="Ctrl+Shift+B" readonly>
+        </div>
+      </section>
+      
+      <section class="settings-section">
+        <h2>Behavior</h2>
+        
+        <div class="setting-item">
+          <label for="auto-save">Auto-save Bookmarks</label>
+          <input type="checkbox" id="auto-save" checked>
+        </div>
+        
+        <div class="setting-item">
+          <label for="context-menu">Enable Context Menu</label>
+          <input type="checkbox" id="context-menu" checked>
+        </div>
+        
+        <div class="setting-item">
+          <label for="floating-button">Show Floating Action Button</label>
+          <input type="checkbox" id="floating-button" checked>
+        </div>
+      </section>
+      
+      <section class="settings-section">
+        <h2>Data Management</h2>
+        
+        <div class="setting-item">
+          <label>Export Bookmarks</label>
+          <button id="export-bookmarks" class="action-btn secondary">Export to JSON</button>
+        </div>
+        
+        <div class="setting-item">
+          <label>Import Bookmarks</label>
+          <input type="file" id="import-bookmarks" accept=".json" style="display: none;">
+          <button id="import-trigger" class="action-btn secondary">Import from JSON</button>
+        </div>
+        
+        <div class="setting-item">
+          <label>Clear All Data</label>
+          <button id="clear-all-data" class="action-btn danger">Clear All Bookmarks</button>
+        </div>
+      </section>
+    </main>
+    
+    <footer class="options-footer">
+      <div class="save-status" id="save-status"></div>
+      <div class="footer-actions">
+        <button id="reset-defaults" class="action-btn secondary">Reset to Defaults</button>
+        <button id="save-settings" class="action-btn primary">Save Settings</button>
+      </div>
+    </footer>
+  </div>
+  
+  <script type="module" src="options.ts"></script>
+</body>
+</html>

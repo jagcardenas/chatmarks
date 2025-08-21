@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Chatmarks",
+  "version": "1.0.0",
+  "description": "Transform AI conversations into navigable, annotated documents with intelligent bookmarking and conversation branching.",
+  
+
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://x.com/*",
+        "https://grok.x.ai/*"
+      ],
+      "js": ["src/content/main.ts"],
+      "css": ["src/content/styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "Chatmarks - AI Conversation Bookmarks"
+  },
+
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/content/ui/*.html",
+        "src/content/ui/*.css"
+      ],
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://x.com/*",
+        "https://grok.x.ai/*"
+      ]
+    }
+  ],
+
+  "options_page": "src/options/index.html"
+}

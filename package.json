@@ -1,0 +1,64 @@
+{
+  "name": "chatmarks",
+  "version": "1.0.0",
+  "description": "A browser extension that adds powerful note-taking capabilities to ChatGPT, Claude, and Grok conversations.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "build:watch": "vite build --watch",
+    "preview": "vite preview",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky",
+    "precommit": "npm run typecheck && npm run lint && npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagcardenas/chatmarks.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jagcardenas/chatmarks/issues"
+  },
+  "homepage": "https://github.com/jagcardenas/chatmarks#readme",
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{ts,tsx}": [
+      "jest --findRelatedTests --passWithNoTests"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@crxjs/vite-plugin": "^2.2.0",
+    "@eslint/js": "^9.33.0",
+    "@types/chrome": "^0.1.4",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
+    "eslint": "^9.33.0",
+    "globals": "^16.3.0",
+    "husky": "^9.1.7",
+    "jest": "^30.0.5",
+    "lint-staged": "^16.1.5",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3"
+  }
+}

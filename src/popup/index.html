@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatmarks</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>Chatmarks</h1>
+      <p class="tagline">AI Conversation Bookmarks</p>
+    </header>
+    
+    <main class="popup-main">
+      <div class="bookmark-summary">
+        <div class="summary-item">
+          <span class="summary-label">Total Bookmarks:</span>
+          <span class="summary-value" id="total-bookmarks">0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Current Conversation:</span>
+          <span class="summary-value" id="current-conversation">0</span>
+        </div>
+      </div>
+      
+      <div class="quick-actions">
+        <button id="show-sidebar-btn" class="action-btn primary">
+          Show Sidebar
+        </button>
+        <button id="open-options-btn" class="action-btn secondary">
+          Settings
+        </button>
+      </div>
+      
+      <div class="recent-bookmarks">
+        <h3>Recent Bookmarks</h3>
+        <div id="recent-bookmarks-list" class="bookmark-list">
+          <p class="empty-state">No bookmarks yet. Select text on ChatGPT, Claude, or Grok to create your first bookmark.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script type="module" src="popup.ts"></script>
+</body>
+</html>
