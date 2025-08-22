@@ -17,12 +17,14 @@ import { TextSelection } from './selection/TextSelection';
 import { AnchorSystem } from './anchoring/AnchorSystem';
 import { ChatGPTAdapter, createPlatformAdapter } from './adapters';
 import { HighlightRenderer } from './ui/highlights/HighlightRenderer';
+import { KeyboardManager, KeyboardShortcut } from './keyboard/KeyboardManager';
 
 // Global instances for content script management
 let textSelection: TextSelection;
 let anchorSystem: AnchorSystem;
 let platformAdapter: ChatGPTAdapter | null = null;
 let highlightRenderer: HighlightRenderer;
+let keyboardManager: KeyboardManager;
 let currentPlatform: Platform | null = null;
 let currentSelection: SelectionRange | null = null;
 let floatingButtonEl: HTMLButtonElement | null = null;
@@ -278,12 +280,14 @@ async function initializeContentScript(): Promise<void> {
     anchorSystem = new AnchorSystem(document);
     // Initialize highlight renderer
     highlightRenderer = new HighlightRenderer(document);
+    // Initialize keyboard manager
+    keyboardManager = new KeyboardManager(document);
 
     // Set up selection event listeners
     setupSelectionListeners();
 
-    // Set up keyboard shortcuts
-    setupKeyboardShortcuts();
+    // Set up keyboard shortcuts with KeyboardManager
+    await setupKeyboardShortcuts();
 
     // Apply theme from settings
     await applyThemeFromSettings();
@@ -479,24 +483,99 @@ function hideBookmarkCreationUI(): void {
 }
 
 /**
- * Set up keyboard shortcuts for bookmark operations
+ * Set up keyboard shortcuts for bookmark operations using KeyboardManager
  */
-function setupKeyboardShortcuts(): void {
-  addTrackedTypedEventListener(document, 'keydown', handleKeyboardShortcut);
+async function setupKeyboardShortcuts(): Promise<void> {
+  try {
+    // Load shortcuts from settings and enable the keyboard manager
+    await keyboardManager.loadFromSettings();
+    keyboardManager.enable();
+
+    // Register actual shortcut actions
+    registerKeyboardShortcutActions();
+
+    // Check for conflicts and log them
+    const conflicts = keyboardManager.detectConflicts();
+    if (conflicts.length > 0) {
+      console.warn('Chatmarks: Keyboard shortcut conflicts detected:', conflicts);
+    }
+  } catch (error) {
+    console.error('Chatmarks: Failed to setup keyboard shortcuts:', error);
+  }
 }
 
 /**
- * Handle keyboard shortcut events
+ * Register the actual actions for keyboard shortcuts
  */
-function handleKeyboardShortcut(event: KeyboardEvent): void {
-  // Handle Ctrl+B (or Cmd+B on Mac) for bookmark creation
-  if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed) {
-      event.preventDefault();
-      openBookmarkDialog();
+function registerKeyboardShortcutActions(): void {
+  const shortcuts = keyboardManager.getAllShortcuts();
+
+  // Override placeholder actions with real implementations
+  for (const shortcut of shortcuts) {
+    switch (shortcut.id) {
+      case 'createBookmark':
+        keyboardManager.registerShortcut({
+          ...shortcut,
+          action: handleCreateBookmarkShortcut,
+        });
+        break;
+
+      case 'nextBookmark':
+        keyboardManager.registerShortcut({
+          ...shortcut,
+          action: handleNextBookmarkShortcut,
+        });
+        break;
+
+      case 'prevBookmark':
+        keyboardManager.registerShortcut({
+          ...shortcut,
+          action: handlePrevBookmarkShortcut,
+        });
+        break;
+
+      case 'showSidebar':
+        keyboardManager.registerShortcut({
+          ...shortcut,
+          action: handleShowSidebarShortcut,
+        });
+        break;
     }
   }
+}
+
+/**
+ * Handle create bookmark keyboard shortcut
+ */
+function handleCreateBookmarkShortcut(): void {
+  const selection = window.getSelection();
+  if (selection && !selection.isCollapsed && currentPlatform) {
+    openBookmarkDialog();
+  }
+}
+
+/**
+ * Handle next bookmark navigation shortcut
+ */
+function handleNextBookmarkShortcut(): void {
+  // TODO: Implement next bookmark navigation (Task 15)
+  console.log('Next bookmark shortcut triggered - navigation not yet implemented');
+}
+
+/**
+ * Handle previous bookmark navigation shortcut
+ */
+function handlePrevBookmarkShortcut(): void {
+  // TODO: Implement previous bookmark navigation (Task 15)
+  console.log('Previous bookmark shortcut triggered - navigation not yet implemented');
+}
+
+/**
+ * Handle show sidebar shortcut
+ */
+function handleShowSidebarShortcut(): void {
+  // TODO: Implement sidebar toggle (Task 17)
+  console.log('Show sidebar shortcut triggered - sidebar not yet implemented');
 }
 
 /**
@@ -816,6 +895,11 @@ async function cleanupContentScript(): Promise<void> {
     highlightRenderer.cleanup();
   }
 
+  // Clean up keyboard manager
+  if (keyboardManager) {
+    keyboardManager.cleanup();
+  }
+
   // Flush any pending storage operations
   // Note: StorageService cleanup would be handled by individual service instances
 
@@ -833,6 +917,7 @@ async function cleanupContentScript(): Promise<void> {
   // Clear global references
   textSelection = null as any;
   highlightRenderer = null as any;
+  keyboardManager = null as any;
   currentPlatform = null;
   currentSelection = null;
   floatingButtonEl = null;
