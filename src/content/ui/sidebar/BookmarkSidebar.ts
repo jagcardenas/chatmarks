@@ -501,9 +501,9 @@ export class BookmarkSidebar extends BaseComponent {
    */
   private addSidebarEventListeners(): void {
     // Cache DOM elements for performance
-    this._resizeHandle = this.$('.resize-handle');
+    this._resizeHandle = this.$('.resize-handle') as HTMLElement | null;
     this._searchInput = this.$('.search-input') as HTMLInputElement;
-    this._bookmarkList = this.$('.bookmarks-list');
+    this._bookmarkList = this.$('.bookmarks-list') as HTMLElement | null;
 
     // Header actions
     const collapseButton = this.$('[data-action="collapse"]');
@@ -864,7 +864,9 @@ export class BookmarkSidebar extends BaseComponent {
     // For now, render all items (will optimize with virtual scrolling later)
     this._filteredBookmarks.forEach(bookmark => {
       const item = this.createBookmarkItem(bookmark);
-      this._bookmarkList.appendChild(item);
+      if (this._bookmarkList) {
+        this._bookmarkList.appendChild(item);
+      }
     });
   }
 

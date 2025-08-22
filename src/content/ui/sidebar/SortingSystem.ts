@@ -412,7 +412,7 @@ export class SortingSystem {
       default:
         if (key.match(/^\d{4}-\d{2}$/)) {
           const [year, month] = key.split('-').map(Number);
-          return new Date(year, month - 1, 1);
+          return new Date(year ?? 0, (month ?? 1) - 1, 1);
         } else if (key.match(/^\d{4}$/)) {
           return new Date(Number(key), 0, 1);
         }
@@ -436,7 +436,7 @@ export class SortingSystem {
       default:
         if (key.match(/^\d{4}-\d{2}$/)) {
           const [year, month] = key.split('-').map(Number);
-          const date = new Date(year, month - 1);
+          const date = new Date(year ?? 0, (month ?? 1) - 1);
           return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
         } else if (key.match(/^\d{4}$/)) {
           return key;

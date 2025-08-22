@@ -399,10 +399,10 @@ export class VirtualBookmarkList extends BaseComponent {
    */
   private initializeVirtualScrolling(): void {
     // Cache DOM elements
-    this.scrollContainer = this.$('.list-container');
-    this.listContainer = this.$('.list-items');
-    this.spacerTop = this.$('.spacer-top');
-    this.spacerBottom = this.$('.spacer-bottom');
+    this.scrollContainer = this.$('.list-container') as HTMLElement | null;
+    this.listContainer = this.$('.list-items') as HTMLElement | null;
+    this.spacerTop = this.$('.spacer-top') as HTMLElement | null;
+    this.spacerBottom = this.$('.spacer-bottom') as HTMLElement | null;
 
     if (!this.scrollContainer || !this.listContainer) {
       console.error('VirtualBookmarkList: Required DOM elements not found');
@@ -506,13 +506,13 @@ export class VirtualBookmarkList extends BaseComponent {
       case 'Enter':
       case ' ':
         event.preventDefault();
-        if (currentIndex >= 0) {
+        if (currentIndex >= 0 && this._items[currentIndex]) {
           this._callbacks.onItemClick?.(this._items[currentIndex].bookmark, currentIndex);
         }
         break;
 
       case 'Delete':
-        if (currentIndex >= 0) {
+        if (currentIndex >= 0 && this._items[currentIndex]) {
           this._callbacks.onItemDelete?.(this._items[currentIndex].bookmark, currentIndex);
         }
         break;
@@ -785,6 +785,7 @@ export class VirtualBookmarkList extends BaseComponent {
     if (index < 0 || index >= this._items.length) return;
 
     const item = this._items[index];
+    if (!item) return;
     const bookmarkId = item.bookmark.id;
 
     if (!this._options.multiSelect) {
@@ -817,7 +818,7 @@ export class VirtualBookmarkList extends BaseComponent {
   private updateSelectionState(): void {
     this.renderedItems.forEach((element, index) => {
       const item = this._items[index];
-      if (this._selectedItems.has(item.bookmark.id)) {
+      if (item && this._selectedItems.has(item.bookmark.id)) {
         element.classList.add('selected');
       } else {
         element.classList.remove('selected');
@@ -960,8 +961,8 @@ export class VirtualBookmarkList extends BaseComponent {
     if (this._loading === value) return;
     this._loading = value;
     
-    const loadingState = this.$('.loading-state');
-    const listContainer = this.$('.list-container');
+    const loadingState = this.$('.loading-state') as HTMLElement;
+    const listContainer = this.$('.list-container') as HTMLElement;
     
     if (loadingState && listContainer) {
       if (value) {

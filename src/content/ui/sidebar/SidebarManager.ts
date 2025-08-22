@@ -133,7 +133,7 @@ export class SidebarManager {
     const sidebarCallbacks: BookmarkSidebarCallbacks = {
       onBookmarkClick: this.handleBookmarkClick.bind(this),
       onBookmarkEdit: this.handleBookmarkEdit.bind(this),
-      onBookmarkDelete: (bookmark: Bookmark) => this.handleBookmarkDelete(bookmark),
+      onBookmarkDelete: (bookmarkId: string) => this.handleBookmarkDeleteById(bookmarkId),
       onSearchChange: this.handleSearchChange.bind(this),
       onFilterChange: this.handleFilterChange.bind(this),
     };
@@ -437,6 +437,16 @@ export class SidebarManager {
    */
   private handleBookmarkEdit(bookmark: Bookmark): void {
     this.callbacks.onBookmarkUpdate?.(bookmark);
+  }
+
+  /**
+   * Handle bookmark delete by ID
+   */
+  private async handleBookmarkDeleteById(bookmarkId: string): Promise<void> {
+    const bookmark = this.allBookmarks.find(b => b.id === bookmarkId);
+    if (bookmark) {
+      await this.handleBookmarkDelete(bookmark);
+    }
   }
 
   /**
