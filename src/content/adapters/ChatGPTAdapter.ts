@@ -35,10 +35,7 @@ const CHATGPT_CONFIG: PlatformAdapterConfig = {
     messageContent: 'div[class*="whitespace-pre-wrap"]',
     conversationContainer: '[role="main"]',
   },
-  urlPatterns: [
-    'chatgpt.com',
-    'chat.openai.com',
-  ],
+  urlPatterns: ['chatgpt.com', 'chat.openai.com'],
   performance: {
     detectionTimeout: 100,
     extractionTimeout: 500,
@@ -64,7 +61,9 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
   detectPlatform(): boolean {
     return this.measurePerformance(() => {
       const hostname = window.location.hostname;
-      return this.config.urlPatterns.some(pattern => hostname.includes(pattern));
+      return this.config.urlPatterns.some(pattern =>
+        hostname.includes(pattern)
+      );
     }, 'platformDetectionTime');
   }
 
@@ -73,7 +72,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   getConversationId(): string | null {
     const url = window.location.href;
-    
+
     // ChatGPT URL patterns: https://chatgpt.com/c/[conversation-id] or https://chat.openai.com/c/[conversation-id]
     const match = url.match(/(?:chatgpt\.com|chat\.openai\.com)\/c\/([^/?#]+)/);
     if (match && match[1]) {
@@ -98,7 +97,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
     return this.measurePerformance(() => {
       const result = this.extractMessages();
       this.metrics.messageCount = result.messages.length;
-      
+
       if (!result.success) {
         this.metrics.errorCount++;
         this.metrics.lastError = result.error;
@@ -132,14 +131,16 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
     const messageElement = this.findMessageById(anchor.messageId);
     if (!messageElement) {
       if (process.env.NODE_ENV === 'development') {
-        console.warn('ChatGPTAdapter: Could not find message element for bookmark injection');
+        console.warn(
+          'ChatGPTAdapter: Could not find message element for bookmark injection'
+        );
       }
       return;
     }
 
     // Create bookmark indicator
     const bookmarkIndicator = this.createBookmarkIndicator(bookmark);
-    
+
     // Position relative to message content
     const contentElement = this.findMessageContent(messageElement);
     if (contentElement) {
@@ -154,7 +155,9 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
     const conversationContainer = this.findConversationContainer();
     if (!conversationContainer) {
       if (process.env.NODE_ENV === 'development') {
-        console.warn('ChatGPTAdapter: Could not find conversation container for observation');
+        console.warn(
+          'ChatGPTAdapter: Could not find conversation container for observation'
+        );
       }
       return;
     }
@@ -164,25 +167,25 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
       if (this.debounceTimer) {
         clearTimeout(this.debounceTimer);
       }
-      
+
       this.debounceTimer = setTimeout(() => {
         callback(messages);
       }, this.config.performance.observerDebounce);
     };
 
-    this.messageObserver = this.createObserver((mutations) => {
+    this.messageObserver = this.createObserver(mutations => {
       const newMessages: Element[] = [];
-      
+
       mutations.forEach(mutation => {
         mutation.addedNodes.forEach(node => {
           if (node.nodeType === Node.ELEMENT_NODE) {
             const element = node as Element;
-            
+
             // Check if this is a message container
             if (this.isMessageContainer(element)) {
               newMessages.push(element);
             }
-            
+
             // Check for message containers within the added node
             const messageContainers = this.findMessageContainers(element);
             newMessages.push(...messageContainers);
@@ -206,7 +209,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   private extractMessages(): MessageExtractionResult {
     const startTime = performance.now();
-    
+
     try {
       const messageElements = this.findAllMessageContainers();
       const messages: MessageElement[] = [];
@@ -221,7 +224,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
       }
 
       const extractionTime = performance.now() - startTime;
-      
+
       return {
         success: true,
         messages,
@@ -229,11 +232,12 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
       };
     } catch (error) {
       const extractionTime = performance.now() - startTime;
-      
+
       return {
         success: false,
         messages: [],
-        error: error instanceof Error ? error.message : 'Unknown extraction error',
+        error:
+          error instanceof Error ? error.message : 'Unknown extraction error',
         extractionTime,
       };
     }
@@ -248,14 +252,20 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
       document.querySelectorAll(this.config.primarySelectors.messageContainer)
     );
 
-    // If no elements found, try fallback selectors
-    if (elements.length === 0) {
-      elements = Array.from(
-        document.querySelectorAll(this.config.fallbackSelectors.messageContainer)
-      );
+    // Always try fallback selectors and combine results to handle mixed scenarios
+    const fallbackElements = Array.from(
+      document.querySelectorAll(this.config.fallbackSelectors.messageContainer)
+    );
+
+    // Combine and deduplicate elements (avoid duplicates if same element matches both selectors)
+    const allElements = [...elements];
+    for (const fallbackElement of fallbackElements) {
+      if (!elements.includes(fallbackElement)) {
+        allElements.push(fallbackElement);
+      }
     }
 
-    return elements;
+    return allElements;
   }
 
   /**
@@ -263,7 +273,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   private findMessageContainers(element: Element): Element[] {
     const containers: Element[] = [];
-    
+
     // Check primary selectors
     const primaryMatches = element.querySelectorAll(
       this.config.primarySelectors.messageContainer
@@ -357,7 +367,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
     const index = siblings.indexOf(element);
     const contentPreview = this.extractMessageContent(element).slice(0, 50);
     const contentHash = this.simpleHash(contentPreview);
-    
+
     return `chatgpt-msg-${index}-${contentHash}`;
   }
 
@@ -385,7 +395,10 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
       if (headingText.includes('you') || headingText.includes('user')) {
         return 'user';
       }
-      if (headingText.includes('chatgpt') || headingText.includes('assistant')) {
+      if (
+        headingText.includes('chatgpt') ||
+        headingText.includes('assistant')
+      ) {
         return 'assistant';
       }
     }
@@ -399,13 +412,17 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   private extractMessageContent(element: Element): string {
     // Try primary content selectors
-    const contentElement = element.querySelector(this.config.primarySelectors.messageContent);
+    const contentElement = element.querySelector(
+      this.config.primarySelectors.messageContent
+    );
     if (contentElement) {
       return this.cleanTextContent(contentElement.textContent || '');
     }
 
     // Try fallback content selectors
-    const fallbackContentElement = element.querySelector(this.config.fallbackSelectors.messageContent);
+    const fallbackContentElement = element.querySelector(
+      this.config.fallbackSelectors.messageContent
+    );
     if (fallbackContentElement) {
       return this.cleanTextContent(fallbackContentElement.textContent || '');
     }
@@ -419,13 +436,17 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   private findMessageContent(element: Element): Element | null {
     // Try primary content selectors
-    const contentElement = element.querySelector(this.config.primarySelectors.messageContent);
+    const contentElement = element.querySelector(
+      this.config.primarySelectors.messageContent
+    );
     if (contentElement) {
       return contentElement;
     }
 
     // Try fallback content selectors
-    const fallbackContentElement = element.querySelector(this.config.fallbackSelectors.messageContent);
+    const fallbackContentElement = element.querySelector(
+      this.config.fallbackSelectors.messageContent
+    );
     if (fallbackContentElement) {
       return fallbackContentElement;
     }
@@ -463,11 +484,15 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   private findConversationContainer(): Element | null {
     // Try primary selector
-    const primary = document.querySelector(this.config.primarySelectors.conversationContainer);
+    const primary = document.querySelector(
+      this.config.primarySelectors.conversationContainer
+    );
     if (primary) return primary;
 
     // Try fallback selector
-    const fallback = document.querySelector(this.config.fallbackSelectors.conversationContainer);
+    const fallback = document.querySelector(
+      this.config.fallbackSelectors.conversationContainer
+    );
     if (fallback) return fallback;
 
     return null;
@@ -493,7 +518,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
     `;
     indicator.title = bookmark.note || 'Bookmark';
     indicator.setAttribute('data-bookmark-id', bookmark.id);
-    
+
     return indicator;
   }
 
@@ -518,9 +543,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    * Cleans and normalizes text content
    */
   private cleanTextContent(text: string): string {
-    return text
-      .replace(/\s+/g, ' ')
-      .trim();
+    return text.replace(/\s+/g, ' ').trim();
   }
 
   /**
@@ -530,7 +553,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(36);
@@ -541,7 +564,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   cleanup(): void {
     super.cleanup();
-    
+
     if (this.messageObserver) {
       this.messageObserver.disconnect();
       this.messageObserver = null;
