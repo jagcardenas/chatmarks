@@ -52,6 +52,70 @@ function addTrackedTypedEventListener<T extends Event>(
 }
 
 /**
+ * Create reusable floating bookmark button
+ */
+function createFloatingButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.textContent = 'Bookmark';
+  button.style.position = 'fixed';
+  button.style.zIndex = '2147483647';
+  button.style.padding = '6px 10px';
+  button.style.fontSize = '12px';
+  button.style.border = '1px solid var(--chatmarks-border)';
+  button.style.borderRadius = '6px';
+  button.style.background = 'var(--chatmarks-primary)';
+  button.style.color = '#fff';
+  button.style.boxShadow = 'var(--chatmarks-shadow)';
+  button.style.cursor = 'pointer';
+  button.style.userSelect = 'none';
+
+  // Prevent default behavior and handle click
+  addTrackedEventListener(button, 'mousedown', e => e.preventDefault());
+  addTrackedTypedEventListener(button, 'click', () => openBookmarkDialog());
+
+  return button;
+}
+
+/**
+ * Create reusable dialog overlay
+ */
+function createDialogOverlay(): HTMLDivElement {
+  const overlay = document.createElement('div');
+  overlay.style.position = 'fixed';
+  overlay.style.inset = '0';
+  overlay.style.background = 'rgba(0,0,0,0.2)';
+  overlay.style.zIndex = '2147483646';
+
+  addTrackedTypedEventListener(overlay, 'click', (e: MouseEvent) => {
+    if (e.target === overlay) closeBookmarkDialog();
+  });
+
+  return overlay;
+}
+
+/**
+ * Create reusable dialog container with content
+ */
+function createDialogContainer(): HTMLDivElement {
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.minWidth = '320px';
+  container.style.maxWidth = '480px';
+  container.style.background = '#ffffff';
+  container.style.color = 'var(--chatmarks-text)';
+  container.style.border = '1px solid var(--chatmarks-border)';
+  container.style.borderRadius = '8px';
+  container.style.boxShadow = 'var(--chatmarks-shadow)';
+  container.style.zIndex = '2147483647';
+  container.style.padding = '12px';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '8px';
+
+  return container;
+}
+
+/**
  * Remove all tracked event listeners
  */
 function removeTrackedEventListeners(): void {
@@ -59,6 +123,104 @@ function removeTrackedEventListeners(): void {
     target.removeEventListener(type, listener);
   });
   eventListeners = [];
+}
+
+/**
+ * Populate dialog with content and event handlers
+ */
+function populateDialogContent(container: HTMLDivElement): void {
+  // Clear existing content
+  container.innerHTML = '';
+
+  const titleEl = document.createElement('div');
+  titleEl.textContent = 'Create bookmark';
+  titleEl.style.fontSize = '14px';
+  titleEl.style.fontWeight = '600';
+
+  const selectedPreview = document.createElement('div');
+  selectedPreview.id = 'bookmark-preview';
+  selectedPreview.textContent = `"${currentSelection!.selectedText.slice(0, 140)}${currentSelection!.selectedText.length > 140 ? '…' : ''}"`;
+  selectedPreview.style.fontSize = '12px';
+  selectedPreview.style.color = 'var(--chatmarks-text-secondary)';
+  selectedPreview.style.background = 'var(--chatmarks-secondary)';
+  selectedPreview.style.border = '1px solid var(--chatmarks-border)';
+  selectedPreview.style.borderRadius = '6px';
+  selectedPreview.style.padding = '8px';
+  selectedPreview.style.maxHeight = '96px';
+  selectedPreview.style.overflow = 'auto';
+
+  const noteLabel = document.createElement('label');
+  noteLabel.textContent = 'Note (optional)';
+  noteLabel.style.fontSize = '12px';
+  noteLabel.style.color = 'var(--chatmarks-text)';
+
+  const noteInput = document.createElement('textarea');
+  noteInput.id = 'bookmark-note-input';
+  noteInput.placeholder = 'Add a short note';
+  noteInput.style.width = '100%';
+  noteInput.style.minHeight = '72px';
+  noteInput.style.resize = 'vertical';
+  noteInput.style.fontSize = '12px';
+  noteInput.style.padding = '8px';
+  noteInput.style.border = '1px solid var(--chatmarks-border)';
+  noteInput.style.borderRadius = '6px';
+  noteInput.style.outline = 'none';
+
+  const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.justifyContent = 'flex-end';
+  actions.style.gap = '8px';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.padding = '6px 10px';
+  cancelBtn.style.fontSize = '12px';
+  cancelBtn.style.border = '1px solid var(--chatmarks-border)';
+  cancelBtn.style.borderRadius = '6px';
+  cancelBtn.style.background = '#ffffff';
+  cancelBtn.style.color = 'var(--chatmarks-text)';
+  addTrackedTypedEventListener(cancelBtn, 'click', () => closeBookmarkDialog());
+
+  const saveBtn = document.createElement('button');
+  saveBtn.id = 'bookmark-save-btn';
+  saveBtn.textContent = 'Save Bookmark';
+  saveBtn.style.padding = '6px 10px';
+  saveBtn.style.fontSize = '12px';
+  saveBtn.style.border = '1px solid var(--chatmarks-border)';
+  saveBtn.style.borderRadius = '6px';
+  saveBtn.style.background = 'var(--chatmarks-primary)';
+  saveBtn.style.color = '#ffffff';
+  addTrackedTypedEventListener(saveBtn, 'click', async () => {
+    const noteInput = document.getElementById('bookmark-note-input') as HTMLTextAreaElement;
+    await saveBookmark(noteInput.value.trim());
+    closeBookmarkDialog();
+    hideBookmarkCreationUI();
+    clearCurrentSelection();
+  });
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(saveBtn);
+
+  container.appendChild(titleEl);
+  container.appendChild(selectedPreview);
+  container.appendChild(noteLabel);
+  container.appendChild(noteInput);
+  container.appendChild(actions);
+}
+
+/**
+ * Update existing dialog content with current selection
+ */
+function updateDialogContent(container: HTMLDivElement): void {
+  const previewEl = document.getElementById('bookmark-preview');
+  if (previewEl && currentSelection) {
+    previewEl.textContent = `"${currentSelection.selectedText.slice(0, 140)}${currentSelection.selectedText.length > 140 ? '…' : ''}"`;
+  }
+
+  const noteInput = document.getElementById('bookmark-note-input') as HTMLTextAreaElement;
+  if (noteInput) {
+    noteInput.value = ''; // Clear previous note
+  }
 }
 
 /**
@@ -264,23 +426,7 @@ function handleMouseUp(event: MouseEvent): void {
  */
 function showBookmarkCreationUI(event: MouseEvent): void {
   if (!floatingButtonEl) {
-    floatingButtonEl = document.createElement('button');
-    floatingButtonEl.textContent = 'Bookmark';
-    floatingButtonEl.style.position = 'fixed';
-    floatingButtonEl.style.zIndex = '2147483647';
-    floatingButtonEl.style.padding = '6px 10px';
-    floatingButtonEl.style.fontSize = '12px';
-    floatingButtonEl.style.border = '1px solid var(--chatmarks-border)';
-    floatingButtonEl.style.borderRadius = '6px';
-    floatingButtonEl.style.background = 'var(--chatmarks-primary)';
-    floatingButtonEl.style.color = '#fff';
-    floatingButtonEl.style.boxShadow = 'var(--chatmarks-shadow)';
-    floatingButtonEl.style.cursor = 'pointer';
-    floatingButtonEl.style.userSelect = 'none';
-    floatingButtonEl.addEventListener('mousedown', e => e.preventDefault());
-    floatingButtonEl.addEventListener('click', () => {
-      openBookmarkDialog();
-    });
+    floatingButtonEl = createFloatingButton();
     document.body.appendChild(floatingButtonEl);
   }
 
@@ -349,108 +495,19 @@ function openBookmarkDialog(): void {
   if (!currentSelection || !currentPlatform) return;
 
   if (!dialogOverlayEl) {
-    dialogOverlayEl = document.createElement('div');
-    dialogOverlayEl.style.position = 'fixed';
-    dialogOverlayEl.style.inset = '0';
-    dialogOverlayEl.style.background = 'rgba(0,0,0,0.2)';
-    dialogOverlayEl.style.zIndex = '2147483646';
-    dialogOverlayEl.addEventListener('click', e => {
-      if (e.target === dialogOverlayEl) closeBookmarkDialog();
-    });
+    dialogOverlayEl = createDialogOverlay();
     document.body.appendChild(dialogOverlayEl);
   } else {
     dialogOverlayEl.style.display = 'block';
   }
 
   if (!dialogContainerEl) {
-    dialogContainerEl = document.createElement('div');
-    dialogContainerEl.style.position = 'fixed';
-    dialogContainerEl.style.minWidth = '320px';
-    dialogContainerEl.style.maxWidth = '480px';
-    dialogContainerEl.style.background = '#ffffff';
-    dialogContainerEl.style.color = 'var(--chatmarks-text)';
-    dialogContainerEl.style.border = '1px solid var(--chatmarks-border)';
-    dialogContainerEl.style.borderRadius = '8px';
-    dialogContainerEl.style.boxShadow = 'var(--chatmarks-shadow)';
-    dialogContainerEl.style.zIndex = '2147483647';
-    dialogContainerEl.style.padding = '12px';
-    dialogContainerEl.style.display = 'flex';
-    dialogContainerEl.style.flexDirection = 'column';
-    dialogContainerEl.style.gap = '8px';
-
-    const titleEl = document.createElement('div');
-    titleEl.textContent = 'Create bookmark';
-    titleEl.style.fontSize = '14px';
-    titleEl.style.fontWeight = '600';
-
-    const selectedPreview = document.createElement('div');
-    selectedPreview.textContent = `"${currentSelection.selectedText.slice(0, 140)}${currentSelection.selectedText.length > 140 ? '…' : ''}"`;
-    selectedPreview.style.fontSize = '12px';
-    selectedPreview.style.color = 'var(--chatmarks-text-secondary)';
-    selectedPreview.style.background = 'var(--chatmarks-secondary)';
-    selectedPreview.style.border = '1px solid var(--chatmarks-border)';
-    selectedPreview.style.borderRadius = '6px';
-    selectedPreview.style.padding = '8px';
-    selectedPreview.style.maxHeight = '96px';
-    selectedPreview.style.overflow = 'auto';
-
-    const noteLabel = document.createElement('label');
-    noteLabel.textContent = 'Note (optional)';
-    noteLabel.style.fontSize = '12px';
-    noteLabel.style.color = 'var(--chatmarks-text)';
-
-    const noteInput = document.createElement('textarea');
-    noteInput.placeholder = 'Add a short note';
-    noteInput.style.width = '100%';
-    noteInput.style.minHeight = '72px';
-    noteInput.style.resize = 'vertical';
-    noteInput.style.fontSize = '12px';
-    noteInput.style.padding = '8px';
-    noteInput.style.border = '1px solid var(--chatmarks-border)';
-    noteInput.style.borderRadius = '6px';
-    noteInput.style.outline = 'none';
-
-    const actions = document.createElement('div');
-    actions.style.display = 'flex';
-    actions.style.justifyContent = 'flex-end';
-    actions.style.gap = '8px';
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.padding = '6px 10px';
-    cancelBtn.style.fontSize = '12px';
-    cancelBtn.style.border = '1px solid var(--chatmarks-border)';
-    cancelBtn.style.borderRadius = '6px';
-    cancelBtn.style.background = '#ffffff';
-    cancelBtn.style.color = 'var(--chatmarks-text)';
-    cancelBtn.addEventListener('click', () => closeBookmarkDialog());
-
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save Bookmark';
-    saveBtn.style.padding = '6px 10px';
-    saveBtn.style.fontSize = '12px';
-    saveBtn.style.border = '1px solid var(--chatmarks-border)';
-    saveBtn.style.borderRadius = '6px';
-    saveBtn.style.background = 'var(--chatmarks-primary)';
-    saveBtn.style.color = '#ffffff';
-    saveBtn.addEventListener('click', async () => {
-      await saveBookmark(noteInput.value.trim());
-      closeBookmarkDialog();
-      hideBookmarkCreationUI();
-      clearCurrentSelection();
-    });
-
-    actions.appendChild(cancelBtn);
-    actions.appendChild(saveBtn);
-
-    dialogContainerEl.appendChild(titleEl);
-    dialogContainerEl.appendChild(selectedPreview);
-    dialogContainerEl.appendChild(noteLabel);
-    dialogContainerEl.appendChild(noteInput);
-    dialogContainerEl.appendChild(actions);
-
+    dialogContainerEl = createDialogContainer();
+    populateDialogContent(dialogContainerEl);
     document.body.appendChild(dialogContainerEl);
   } else {
+    // Update existing dialog content
+    updateDialogContent(dialogContainerEl);
     dialogContainerEl.style.display = 'flex';
   }
 
