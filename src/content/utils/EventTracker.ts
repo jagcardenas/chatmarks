@@ -9,7 +9,7 @@
 export interface TrackedEventListener {
   target: EventTarget;
   type: string;
-  listener: EventListener;
+  listener: (event: Event) => void;
 }
 
 export class EventTracker {
@@ -26,8 +26,8 @@ export class EventTracker {
   addTrackedEventListener(
     target: EventTarget,
     type: string,
-    listener: EventListener,
-    options?: AddEventListenerOptions
+    listener: (event: Event) => void,
+    options?: boolean | AddEventListenerOptions
   ): void {
     target.addEventListener(type, listener, options);
     this.eventListeners.push({ target, type, listener });
@@ -46,7 +46,7 @@ export class EventTracker {
     target: EventTarget,
     type: string,
     listener: (event: T) => void,
-    options?: AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions
   ): void {
     const genericListener = listener as EventListener;
     this.addTrackedEventListener(target, type, genericListener, options);
@@ -82,7 +82,7 @@ export class EventTracker {
   removeTrackedListener(
     target: EventTarget,
     type: string,
-    listener: EventListener
+    listener: (event: Event) => void
   ): boolean {
     const index = this.eventListeners.findIndex(
       tracked =>
@@ -92,7 +92,7 @@ export class EventTracker {
     );
 
     if (index !== -1) {
-      const [tracked] = this.eventListeners.splice(index, 1);
+      this.eventListeners.splice(index, 1);
       target.removeEventListener(type, listener);
       return true;
     }

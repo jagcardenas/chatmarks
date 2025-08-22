@@ -123,7 +123,7 @@ export class ClaudeAdapter extends BasePlatformAdapter {
           try {
             const props = JSON.parse(propsStr);
             if (props.conversationId) return props.conversationId;
-          } catch (_) {
+          } catch {
             // Invalid JSON, continue to next strategy
           }
         }
