@@ -7,11 +7,13 @@
  */
 
 import { Bookmark, TextAnchor } from '../../../types/bookmark';
-import { AnchorSystem } from '../anchoring/index';
+import { AnchorSystem } from '../../anchoring/AnchorSystem';
 import { TextWrapper, WrappedElement } from './TextWrapper';
 import { OverlapManager, HighlightData } from './OverlapManager';
 
-type PromiseSettledResult<T> = PromiseFulfilledResult<T> | PromiseRejectedResult;
+type PromiseSettledResult<T> =
+  | PromiseFulfilledResult<T>
+  | PromiseRejectedResult;
 
 export interface HighlightStyle {
   /** CSS class name for the highlight */
@@ -112,12 +114,14 @@ export class HighlightRenderer {
    */
   private initializeIntersectionObserver(): void {
     if (!('IntersectionObserver' in window)) {
-      console.debug('Chatmarks: IntersectionObserver not supported, using fallback rendering');
+      console.debug(
+        'Chatmarks: IntersectionObserver not supported, using fallback rendering'
+      );
       return;
     }
 
     this.intersectionObserver = new IntersectionObserver(
-      (entries) => {
+      entries => {
         this.handleIntersectionChanges(entries);
       },
       {
@@ -131,12 +135,16 @@ export class HighlightRenderer {
   /**
    * Handle intersection observer changes for performance optimization
    */
-  private handleIntersectionChanges(entries: IntersectionObserverEntry[]): void {
+  private handleIntersectionChanges(
+    entries: IntersectionObserverEntry[]
+  ): void {
     const newlyVisible: string[] = [];
     const newlyHidden: string[] = [];
 
     for (const entry of entries) {
-      const bookmarkId = (entry.target as Element).getAttribute('data-bookmark-id');
+      const bookmarkId = (entry.target as Element).getAttribute(
+        'data-bookmark-id'
+      );
       if (!bookmarkId) continue;
 
       const isVisible = entry.isIntersecting && entry.intersectionRatio > 0.1;
@@ -272,7 +280,10 @@ export class HighlightRenderer {
       }
 
       // Apply custom styling
-      if (highlightStyle.cssProperties && Object.keys(highlightStyle.cssProperties).length > 0) {
+      if (
+        highlightStyle.cssProperties &&
+        Object.keys(highlightStyle.cssProperties).length > 0
+      ) {
         this.applyCustomStyling(wrapResult.wrappedElements, highlightStyle);
       }
 
@@ -287,7 +298,8 @@ export class HighlightRenderer {
         range,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       errors.push(`Highlight rendering failed: ${errorMessage}`);
 
       // Record failed attempt
@@ -322,7 +334,10 @@ export class HighlightRenderer {
 
         // Re-resolve overlaps after removal
         this.resolveOverlaps().catch(error => {
-          console.warn('Chatmarks: Failed to re-resolve overlaps after removal:', error);
+          console.warn(
+            'Chatmarks: Failed to re-resolve overlaps after removal:',
+            error
+          );
         });
       }
 
@@ -355,7 +370,8 @@ export class HighlightRenderer {
 
       if (updated) {
         // Update stored data
-        highlightData.highlightClass = style.className || highlightData.highlightClass;
+        highlightData.highlightClass =
+          style.className || highlightData.highlightClass;
         highlightData.priority = style.priority || highlightData.priority;
 
         // Apply custom styling
@@ -367,7 +383,10 @@ export class HighlightRenderer {
 
         // Re-resolve overlaps
         this.resolveOverlaps().catch(error => {
-          console.warn('Chatmarks: Failed to re-resolve overlaps after update:', error);
+          console.warn(
+            'Chatmarks: Failed to re-resolve overlaps after update:',
+            error
+          );
         });
       }
 
@@ -420,10 +439,15 @@ export class HighlightRenderer {
             failedToRestore++;
             failedBookmarks.push(bookmark.id);
 
-            const errorMessage = result.status === 'rejected'
-              ? (result as PromiseRejectedResult).reason
-              : (result as PromiseFulfilledResult<RenderResult>).value.errors.join(', ');
-            errors.push(`Failed to restore bookmark ${bookmark.id}: ${errorMessage}`);
+            const errorMessage =
+              result.status === 'rejected'
+                ? (result as PromiseRejectedResult).reason
+                : (
+                    result as PromiseFulfilledResult<RenderResult>
+                  ).value.errors.join(', ');
+            errors.push(
+              `Failed to restore bookmark ${bookmark.id}: ${errorMessage}`
+            );
           }
         }
 
@@ -449,7 +473,8 @@ export class HighlightRenderer {
         failedBookmarks,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       errors.push(`Restore operation failed: ${errorMessage}`);
 
       // Record failed attempt
@@ -462,7 +487,9 @@ export class HighlightRenderer {
         failedToRestore: bookmarks.length - successfullyRestored,
         errors,
         restoredBookmarks,
-        failedBookmarks: bookmarks.filter(b => !restoredBookmarks.includes(b.id)).map(b => b.id),
+        failedBookmarks: bookmarks
+          .filter(b => !restoredBookmarks.includes(b.id))
+          .map(b => b.id),
       };
     }
   }
@@ -473,19 +500,26 @@ export class HighlightRenderer {
    * @returns Comprehensive metrics about highlight system performance
    */
   getMetrics(): HighlightMetrics {
-    const totalElements = Array.from(this.activeHighlights.values())
-      .reduce((sum, highlight) => sum + highlight.wrappedElements.length, 0);
+    const totalElements = Array.from(this.activeHighlights.values()).reduce(
+      (sum, highlight) => sum + highlight.wrappedElements.length,
+      0
+    );
 
-    const averageRenderTime = this.renderTimes.length > 0
-      ? this.renderTimes.reduce((sum, time) => sum + time, 0) / this.renderTimes.length
-      : 0;
+    const averageRenderTime =
+      this.renderTimes.length > 0
+        ? this.renderTimes.reduce((sum, time) => sum + time, 0) /
+          this.renderTimes.length
+        : 0;
 
-    const averageRestoreTime = this.restoreTimes.length > 0
-      ? this.restoreTimes.reduce((sum, time) => sum + time, 0) / this.restoreTimes.length
-      : 0;
+    const averageRestoreTime =
+      this.restoreTimes.length > 0
+        ? this.restoreTimes.reduce((sum, time) => sum + time, 0) /
+          this.restoreTimes.length
+        : 0;
 
     // Rough memory estimate (each element ~ 100 bytes overhead)
-    const estimatedMemoryUsage = this.activeHighlights.size * 200 + totalElements * 150;
+    const estimatedMemoryUsage =
+      this.activeHighlights.size * 200 + totalElements * 150;
 
     return {
       totalHighlights: this.activeHighlights.size,
@@ -548,7 +582,10 @@ export class HighlightRenderer {
   /**
    * Register a highlight with the IntersectionObserver for performance tracking
    */
-  private registerHighlightWithObserver(bookmarkId: string, highlightData: HighlightData): void {
+  private registerHighlightWithObserver(
+    bookmarkId: string,
+    highlightData: HighlightData
+  ): void {
     if (!this.intersectionObserver) {
       return;
     }
@@ -556,7 +593,10 @@ export class HighlightRenderer {
     // Register each wrapped element with the observer
     for (const wrappedElement of highlightData.wrappedElements) {
       // Only observe the first element to avoid duplicate observations
-      if (wrappedElement.highlightElement && wrappedElement.highlightElement.isConnected) {
+      if (
+        wrappedElement.highlightElement &&
+        wrappedElement.highlightElement.isConnected
+      ) {
         this.intersectionObserver.observe(wrappedElement.highlightElement);
       }
     }
@@ -623,7 +663,10 @@ export class HighlightRenderer {
         if (resolution.success) {
           this.overlapManager.applyResolvedClasses(resolution.elementsToUpdate);
         } else {
-          console.warn('Chatmarks: Overlap resolution failed:', resolution.errors);
+          console.warn(
+            'Chatmarks: Overlap resolution failed:',
+            resolution.errors
+          );
         }
       }
     } catch (error) {
@@ -667,7 +710,9 @@ export class HighlightRenderer {
       const currentHighlightData = this.activeHighlights.get(bookmarkId);
       if (currentHighlightData) {
         for (const wrappedElement of currentHighlightData.wrappedElements) {
-          wrappedElement.highlightElement.classList.remove(this.FLASH_ANIMATION_CLASS);
+          wrappedElement.highlightElement.classList.remove(
+            this.FLASH_ANIMATION_CLASS
+          );
         }
       }
     }, 600); // Match CSS animation duration

@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Core Value Proposition:**
 - Zero-cost architecture (no servers, no subscriptions)
-- Privacy-first design (100% local data storage)
+- Privacy-first design (100% local data storage; no external network calls from the extension runtime)
 - Enterprise-grade reliability and performance
 - Seamless integration with existing AI platforms
 
@@ -180,10 +180,10 @@ interface BookmarkSchema {
 
 #### Security & Privacy
 - **Manifest V3 compliance**: Enhanced security model
-- **Minimal permissions**: Only `storage`, `activeTab`, `scripting`
+- **Minimal permissions**: Only `storage`, `activeTab`, `scripting`, `contextMenus`
 - **Content Security Policy**: Prevent XSS attacks
-- **No external requests**: 100% offline operation
-- **Local data encryption**: Via chrome.storage native encryption
+- **No external requests**: 100% offline operation; any future platform integrations must avoid direct API calls from the extension
+- **Local data at rest**: Stored in `chrome.storage.local` and IndexedDB. Note: Chrome may encrypt at the profile level; the extension does not add application-layer encryption.
 
 #### Browser Compatibility
 - **Primary target**: Chrome 88+ (Manifest V3)

@@ -6,13 +6,22 @@
  */
 
 import './styles.css';
-import { Platform, SelectionRange, TextAnchor, Bookmark } from '../types/bookmark';
+import {
+  Platform,
+  SelectionRange,
+  TextAnchor,
+  Bookmark,
+} from '../types/bookmark';
 import { MessageType, ExtensionMessage } from '../types/messages';
 import { TextSelection } from './selection/TextSelection';
+import { AnchorSystem } from './anchoring/AnchorSystem';
+import { ChatGPTAdapter, createPlatformAdapter } from './adapters';
 import { HighlightRenderer } from './ui/highlights/HighlightRenderer';
 
 // Global instances for content script management
 let textSelection: TextSelection;
+let anchorSystem: AnchorSystem;
+let platformAdapter: ChatGPTAdapter | null = null;
 let highlightRenderer: HighlightRenderer;
 let currentPlatform: Platform | null = null;
 let currentSelection: SelectionRange | null = null;
@@ -21,7 +30,11 @@ let dialogContainerEl: HTMLDivElement | null = null;
 let dialogOverlayEl: HTMLDivElement | null = null;
 
 // Event listener cleanup tracking
-let eventListeners: Array<{ target: EventTarget; type: string; listener: EventListener }> = [];
+let eventListeners: Array<{
+  target: EventTarget;
+  type: string;
+  listener: EventListener;
+}> = [];
 
 // Theme cache
 let appliedAccent: string | null = null;
@@ -193,7 +206,9 @@ function populateDialogContent(container: HTMLDivElement): void {
   saveBtn.style.background = 'var(--chatmarks-primary)';
   saveBtn.style.color = '#ffffff';
   addTrackedTypedEventListener(saveBtn, 'click', async () => {
-    const noteInput = document.getElementById('bookmark-note-input') as HTMLTextAreaElement;
+    const noteInput = document.getElementById(
+      'bookmark-note-input'
+    ) as HTMLTextAreaElement;
     await saveBookmark(noteInput.value.trim());
     closeBookmarkDialog();
     hideBookmarkCreationUI();
@@ -219,7 +234,9 @@ function updateDialogContent(container: HTMLDivElement): void {
     previewEl.textContent = `"${currentSelection.selectedText.slice(0, 140)}${currentSelection.selectedText.length > 140 ? '…' : ''}"`;
   }
 
-  const noteInput = document.getElementById('bookmark-note-input') as HTMLTextAreaElement;
+  const noteInput = document.getElementById(
+    'bookmark-note-input'
+  ) as HTMLTextAreaElement;
   if (noteInput) {
     noteInput.value = ''; // Clear previous note
   }
@@ -248,18 +265,17 @@ function createBasicAnchor(selection: SelectionRange): TextAnchor {
  */
 async function initializeContentScript(): Promise<void> {
   try {
-    currentPlatform = detectCurrentPlatform();
+    // Initialize platform adapter
+    platformAdapter = createPlatformAdapter();
+    currentPlatform = platformAdapter?.getPlatformType() || null;
 
-    if (!currentPlatform) {
-      // Platform not supported
+    if (!currentPlatform || !platformAdapter) {
       return;
     }
 
-    // Initialize on detected platform
-
-    // Initialize text selection manager
+    // Initialize managers
     textSelection = new TextSelection();
-
+    anchorSystem = new AnchorSystem(document);
     // Initialize highlight renderer
     highlightRenderer = new HighlightRenderer(document);
 
@@ -274,9 +290,6 @@ async function initializeContentScript(): Promise<void> {
 
     // Restore existing highlights
     await restoreExistingHighlights();
-
-    // Initialize platform-specific adapter (will be implemented in later tasks)
-    // const adapter = await createPlatformAdapter(currentPlatform);
 
     // Notify background script that platform is ready
     chrome.runtime.sendMessage({
@@ -385,7 +398,11 @@ function detectCurrentPlatform(): Platform | null {
  * Set up event listeners for text selection
  */
 function setupSelectionListeners(): void {
-  addTrackedTypedEventListener(document, 'selectionchange', handleSelectionChange);
+  addTrackedTypedEventListener(
+    document,
+    'selectionchange',
+    handleSelectionChange
+  );
   addTrackedTypedEventListener(document, 'mouseup', handleMouseUp);
 }
 
@@ -550,15 +567,40 @@ function clearCurrentSelection(): void {
 
 async function saveBookmark(note: string): Promise<void> {
   if (!currentSelection || !currentPlatform) return;
-  const conversationId = extractConversationId();
+  const conversationId =
+    platformAdapter?.getConversationId() || extractConversationId();
   const messageId = currentSelection.anchor?.messageId || generateMessageId();
+
+  // Prefer robust anchor generation via AnchorSystem
+  let anchorToUse: TextAnchor =
+    currentSelection.anchor || createBasicAnchor(currentSelection);
+  try {
+    if (anchorSystem) {
+      const selectionData: SelectionRange = {
+        selectedText: currentSelection.selectedText,
+        range: currentSelection.range,
+        boundingRect: currentSelection.boundingRect,
+        contextBefore: currentSelection.contextBefore,
+        contextAfter: currentSelection.contextAfter,
+        startOffset: currentSelection.startOffset,
+        endOffset: currentSelection.endOffset,
+        messageId,
+        conversationId,
+        timestamp: new Date().toISOString(),
+      };
+      anchorToUse = anchorSystem.createAnchor(selectionData);
+    }
+  } catch {
+    // Fallback to basic anchor
+  }
+
   const payload = {
     platform: currentPlatform,
     conversationId,
     messageId,
     selectedText: currentSelection.selectedText,
     note,
-    anchor: currentSelection.anchor || createBasicAnchor(currentSelection),
+    anchor: anchorToUse,
   };
 
   try {
@@ -584,7 +626,11 @@ async function saveBookmark(note: string): Promise<void> {
 
       // Render highlight with flash animation
       if (highlightRenderer) {
-        await highlightRenderer.renderHighlight(createdBookmark, undefined, true);
+        await highlightRenderer.renderHighlight(
+          createdBookmark,
+          undefined,
+          true
+        );
       }
     } else {
       console.warn('Chatmarks: Failed to save bookmark', response?.error);
@@ -700,30 +746,49 @@ async function restoreExistingHighlights(): Promise<void> {
       const bookmarks: Bookmark[] = response.data;
 
       if (bookmarks.length > 0) {
-        console.debug(`Chatmarks: Restoring ${bookmarks.length} highlights for conversation ${conversationId}`);
+        console.debug(
+          `Chatmarks: Restoring ${bookmarks.length} highlights for conversation ${conversationId}`
+        );
 
         // Use requestIdleCallback for non-blocking restoration
         if ('requestIdleCallback' in window) {
           requestIdleCallback(async () => {
             try {
-              const restoreResult = await highlightRenderer.restoreHighlights(bookmarks);
-              console.debug('Chatmarks: Highlight restoration completed:', restoreResult);
+              const restoreResult =
+                await highlightRenderer.restoreHighlights(bookmarks);
+              console.debug(
+                'Chatmarks: Highlight restoration completed:',
+                restoreResult
+              );
 
               if (restoreResult.failedToRestore > 0) {
-                console.warn('Chatmarks: Some highlights failed to restore:', restoreResult.errors);
+                console.warn(
+                  'Chatmarks: Some highlights failed to restore:',
+                  restoreResult.errors
+                );
               }
             } catch (error) {
-              console.warn('Chatmarks: Error during highlight restoration:', error);
+              console.warn(
+                'Chatmarks: Error during highlight restoration:',
+                error
+              );
             }
           });
         } else {
           // Fallback for browsers without requestIdleCallback
           setTimeout(async () => {
             try {
-              const restoreResult = await highlightRenderer.restoreHighlights(bookmarks);
-              console.debug('Chatmarks: Highlight restoration completed:', restoreResult);
+              const restoreResult =
+                await highlightRenderer.restoreHighlights(bookmarks);
+              console.debug(
+                'Chatmarks: Highlight restoration completed:',
+                restoreResult
+              );
             } catch (error) {
-              console.warn('Chatmarks: Error during highlight restoration:', error);
+              console.warn(
+                'Chatmarks: Error during highlight restoration:',
+                error
+              );
             }
           }, 100);
         }

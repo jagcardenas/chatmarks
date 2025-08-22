@@ -587,14 +587,14 @@ export class AnchorSystem {
   private resolveUsingFuzzy(anchor: TextAnchor): Range | null {
     // Try to find any reasonable container element
     const element =
-      this.xpathAnchor.resolveXPath(anchor.xpathSelector) || this.document.body; // Fallback to body
+      this.xpathAnchor.resolveXPath(anchor.xpathSelector) || this.document.body;
 
     if (!element) {
       return null;
     }
 
     const containerText = element.textContent || '';
-    const fuzzyRange = this.fuzzyMatcher.findSimilarText(
+    const fuzzyMatchRange = this.fuzzyMatcher.findSimilarText(
       anchor.selectedText,
       containerText,
       {
@@ -604,14 +604,9 @@ export class AnchorSystem {
       }
     );
 
-    if (fuzzyRange) {
-      // Convert the fuzzy match to a proper Range in the DOM
-      return this.fuzzyMatcher.createRangeFromPosition(
-        element,
-        containerText,
-        0, // This would need proper position calculation
-        anchor.selectedText.length
-      );
+    if (fuzzyMatchRange) {
+      // We already have a concrete Range from fuzzy matcher when possible
+      return fuzzyMatchRange;
     }
 
     return null;
