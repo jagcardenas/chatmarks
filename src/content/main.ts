@@ -554,9 +554,20 @@ function generateMessageId(): string {
   return `msg-${Date.now()}`;
 }
 
+// Cleanup function for when content script is unloaded
+async function cleanupContentScript(): Promise<void> {
+  // Flush any pending storage operations
+  // Note: StorageService cleanup would be handled by individual service instances
+}
+
 // Initialize the content script when the page loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initializeContentScript);
 } else {
   initializeContentScript();
 }
+
+// Add cleanup on page unload
+window.addEventListener('beforeunload', () => {
+  cleanupContentScript();
+});

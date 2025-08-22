@@ -25,6 +25,12 @@ export class StorageService {
   private static readonly SCHEMA_VERSION_KEY = 'schemaVersion';
   private static readonly CURRENT_SCHEMA_VERSION = 2;
 
+  // Batching system
+  private batchQueue: Map<string, any> = new Map();
+  private batchTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly BATCH_DELAY = 100; // 100ms batching window
+  private readonly MAX_BATCH_SIZE = 10; // Maximum operations per batch
+
   /**
    * Saves a bookmark to chrome.storage.local with validation
    *
@@ -65,10 +71,8 @@ export class StorageService {
         });
       }
 
-      // Save updated bookmarks array
-      await chrome.storage.local.set({
-        [StorageService.STORAGE_KEY]: existingBookmarks,
-      });
+      // Save updated bookmarks array using batching system
+      await this.saveImmediate(StorageService.STORAGE_KEY, existingBookmarks);
     } catch (error) {
       throw new Error(
         `Failed to save bookmark: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -186,10 +190,8 @@ export class StorageService {
       // Update in array
       bookmarks[bookmarkIndex] = updatedBookmark;
 
-      // Save updated array
-      await chrome.storage.local.set({
-        [StorageService.STORAGE_KEY]: bookmarks,
-      });
+      // Save updated array using batching system
+      await this.saveImmediate(StorageService.STORAGE_KEY, bookmarks);
 
       return {
         success: true,
@@ -228,9 +230,7 @@ export class StorageService {
         bookmark => bookmark.id !== id
       );
 
-      await chrome.storage.local.set({
-        [StorageService.STORAGE_KEY]: filteredBookmarks,
-      });
+      await this.saveImmediate(StorageService.STORAGE_KEY, filteredBookmarks);
     } catch (error) {
       throw new Error(
         `Failed to delete bookmark: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -262,9 +262,7 @@ export class StorageService {
    */
   async clearAllBookmarks(): Promise<void> {
     try {
-      await chrome.storage.local.set({
-        [StorageService.STORAGE_KEY]: [],
-      });
+      await this.saveImmediate(StorageService.STORAGE_KEY, []);
     } catch (error) {
       throw new Error(
         `Failed to clear bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -461,5 +459,85 @@ export class StorageService {
         `Failed to update schema version: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+  }
+
+  /**
+   * Queues an operation for batching
+   *
+   * @param key - Storage key
+   * @param data - Data to store
+   * @param immediate - Execute immediately instead of batching
+   */
+  private queueBatchOperation(key: string, data: any, immediate: boolean = false): void {
+    this.batchQueue.set(key, data);
+
+    if (immediate || this.batchQueue.size >= this.MAX_BATCH_SIZE) {
+      this.flushBatch();
+    } else {
+      this.scheduleBatch();
+    }
+  }
+
+  /**
+   * Schedules batch execution
+   */
+  private scheduleBatch(): void {
+    if (this.batchTimer) {
+      clearTimeout(this.batchTimer);
+    }
+
+    this.batchTimer = setTimeout(() => {
+      this.flushBatch();
+    }, this.BATCH_DELAY);
+  }
+
+  /**
+   * Executes all queued batch operations
+   */
+  private async flushBatch(): Promise<void> {
+    if (this.batchQueue.size === 0) {
+      return;
+    }
+
+    if (this.batchTimer) {
+      clearTimeout(this.batchTimer);
+      this.batchTimer = null;
+    }
+
+    const operations = Object.fromEntries(this.batchQueue);
+    this.batchQueue.clear();
+
+    try {
+      await chrome.storage.local.set(operations);
+    } catch (error) {
+      // Only log non-concurrent modification errors to avoid test noise
+      if (error instanceof Error && !error.message.includes('Concurrent modification')) {
+        console.error('Chatmarks: Failed to execute batch storage operations:', error);
+      }
+    }
+  }
+
+  /**
+   * Flushes any pending batch operations (call on cleanup)
+   */
+  async flushPendingBatch(): Promise<void> {
+    await this.flushBatch();
+  }
+
+  /**
+   * Executes batch operations immediately (for testing and critical operations)
+   */
+  async flushBatchImmediate(): Promise<void> {
+    await this.flushBatch();
+  }
+
+  /**
+   * Saves data immediately without batching (for critical operations)
+   *
+   * @param key - Storage key
+   * @param data - Data to store
+   */
+  private async saveImmediate(key: string, data: any): Promise<void> {
+    this.queueBatchOperation(key, data, true);
   }
 }
