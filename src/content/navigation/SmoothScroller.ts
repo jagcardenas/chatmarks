@@ -11,22 +11,36 @@ import { ScrollOptions } from '../../types/bookmark';
 interface SmoothScrollerConfig {
   /** Duration of highlight animations in milliseconds */
   highlightDuration?: number;
-  
+
   /** Scroll offset from viewport edges */
   scrollOffset?: number;
-  
+
   /** Custom CSS class for highlights */
   highlightClass?: string;
-  
+
   /** Enable Intersection Observer for scroll completion detection */
   useIntersectionObserver?: boolean;
+
+  /** Enable smooth scrolling animations */
+  enableSmoothScrolling?: boolean;
 }
 
 export class SmoothScroller {
-  private config: Required<SmoothScrollerConfig>;
+  private config: SmoothScrollerConfig &
+    Required<
+      Pick<
+        SmoothScrollerConfig,
+        | 'highlightDuration'
+        | 'scrollOffset'
+        | 'highlightClass'
+        | 'useIntersectionObserver'
+        | 'enableSmoothScrolling'
+      >
+    >;
   private intersectionObserver?: IntersectionObserver;
-  private highlightTimeouts: Map<Element, ReturnType<typeof setTimeout>> = new Map();
-  
+  private highlightTimeouts: Map<Element, ReturnType<typeof setTimeout>> =
+    new Map();
+
   // Performance tracking
   private scrollStartTime: number = 0;
   private animationFrameId?: number;
@@ -37,6 +51,7 @@ export class SmoothScroller {
       scrollOffset: 100,
       highlightClass: 'chatmarks-highlight-flash',
       useIntersectionObserver: true,
+      enableSmoothScrolling: true,
       ...config,
     };
 
@@ -48,13 +63,16 @@ export class SmoothScroller {
    * Sets up Intersection Observer for efficient scroll completion detection.
    */
   private setupIntersectionObserver(): void {
-    if (!this.config.useIntersectionObserver) {
+    if (
+      !this.config.useIntersectionObserver ||
+      typeof IntersectionObserver === 'undefined'
+    ) {
       return;
     }
 
     this.intersectionObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           if (entry.isIntersecting) {
             // Element is in viewport - scroll animation likely complete
             const element = entry.target;
@@ -75,7 +93,7 @@ export class SmoothScroller {
    */
   private injectHighlightStyles(): void {
     const styleId = 'chatmarks-smooth-scroller-styles';
-    
+
     // Check if styles already exist
     if (document.getElementById(styleId)) {
       return;
@@ -137,7 +155,7 @@ export class SmoothScroller {
         }
       }
     `;
-    
+
     document.head.appendChild(style);
   }
 
@@ -166,21 +184,21 @@ export class SmoothScroller {
       ...options,
     };
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       // Set up scroll completion detection
       let scrollCompleted = false;
-      
+
       const completeScrolling = () => {
         if (scrollCompleted) return;
         scrollCompleted = true;
-        
+
         const duration = performance.now() - this.scrollStartTime;
         console.debug('SmoothScroller: Scroll completed in', duration, 'ms');
-        
+
         if (this.intersectionObserver) {
           this.intersectionObserver.unobserve(element);
         }
-        
+
         resolve();
       };
 
@@ -204,7 +222,10 @@ export class SmoothScroller {
       try {
         element.scrollIntoView(scrollOptions);
       } catch (error) {
-        console.warn('SmoothScroller: scrollIntoView failed, using fallback:', error);
+        console.warn(
+          'SmoothScroller: scrollIntoView failed, using fallback:',
+          error
+        );
         this.fallbackScrollToElement(element);
         completeScrolling();
       }
@@ -233,14 +254,22 @@ export class SmoothScroller {
    * @param element - The target element
    * @returns The optimal scroll Y position
    */
-  calculateOptimalScrollPosition(element: Element): number {
+  calculateOptimalScrollPosition(element: Element | null): number {
+    if (!element) {
+      return 0;
+    }
+
     const rect = element.getBoundingClientRect();
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    
+
     // Center element in viewport with offset
-    const targetY = scrollTop + rect.top - window.innerHeight / 2 + this.config.scrollOffset;
-    
-    return Math.max(0, Math.min(targetY, document.body.scrollHeight - window.innerHeight));
+    const targetY =
+      scrollTop + rect.top - window.innerHeight / 2 + this.config.scrollOffset;
+
+    return Math.max(
+      0,
+      Math.min(targetY, document.body.scrollHeight - window.innerHeight)
+    );
   }
 
   /**
@@ -254,7 +283,7 @@ export class SmoothScroller {
       return;
     }
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       // Clear any existing highlight timeout
       const existingTimeout = this.highlightTimeouts.get(element);
       if (existingTimeout) {
@@ -275,7 +304,7 @@ export class SmoothScroller {
       // Set up fade-out animation
       const fadeOutTimeout = setTimeout(() => {
         element.classList.add(`${this.config.highlightClass}-fade-out`);
-        
+
         // Remove all highlight classes after fade-out completes
         const cleanupTimeout = setTimeout(() => {
           element.classList.remove(this.config.highlightClass);
@@ -283,7 +312,7 @@ export class SmoothScroller {
           this.highlightTimeouts.delete(element);
           resolve();
         }, 500); // Fade-out animation duration
-        
+
         this.highlightTimeouts.set(element, cleanupTimeout);
       }, this.config.highlightDuration - 500);
 
@@ -311,7 +340,7 @@ export class SmoothScroller {
    * @returns Promise that resolves when scrolling completes
    */
   async scrollToPosition(targetY: number): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const startY = window.pageYOffset;
       const distance = targetY - startY;
       const startTime = performance.now();
@@ -322,9 +351,10 @@ export class SmoothScroller {
         const progress = Math.min(elapsed / duration, 1);
 
         // Easing function (ease-in-out)
-        const easedProgress = progress < 0.5
-          ? 2 * progress * progress
-          : -1 + (4 - 2 * progress) * progress;
+        const easedProgress =
+          progress < 0.5
+            ? 2 * progress * progress
+            : -1 + (4 - 2 * progress) * progress;
 
         const currentY = startY + distance * easedProgress;
         window.scrollTo(0, currentY);
@@ -348,8 +378,10 @@ export class SmoothScroller {
    */
   isElementVisible(element: Element): boolean {
     const rect = element.getBoundingClientRect();
-    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-    const windowWidth = window.innerWidth || document.documentElement.clientWidth;
+    const windowHeight =
+      window.innerHeight || document.documentElement.clientHeight;
+    const windowWidth =
+      window.innerWidth || document.documentElement.clientWidth;
 
     return (
       rect.top >= 0 &&
@@ -367,7 +399,8 @@ export class SmoothScroller {
    */
   getDistanceFromViewport(element: Element): number {
     const rect = element.getBoundingClientRect();
-    const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+    const windowHeight =
+      window.innerHeight || document.documentElement.clientHeight;
 
     if (rect.bottom < 0) {
       // Element is above viewport
@@ -391,7 +424,9 @@ export class SmoothScroller {
     activeHighlights: number;
   } {
     return {
-      lastScrollDuration: this.scrollStartTime ? performance.now() - this.scrollStartTime : undefined,
+      lastScrollDuration: this.scrollStartTime
+        ? performance.now() - this.scrollStartTime
+        : undefined,
       activeHighlights: this.highlightTimeouts.size,
     };
   }
@@ -401,7 +436,7 @@ export class SmoothScroller {
    */
   cleanup(): void {
     // Clear all highlight timeouts
-    this.highlightTimeouts.forEach((timeoutId) => {
+    this.highlightTimeouts.forEach(timeoutId => {
       clearTimeout(timeoutId);
     });
     this.highlightTimeouts.clear();
@@ -417,7 +452,9 @@ export class SmoothScroller {
     }
 
     // Remove injected styles
-    const styleElement = document.getElementById('chatmarks-smooth-scroller-styles');
+    const styleElement = document.getElementById(
+      'chatmarks-smooth-scroller-styles'
+    );
     if (styleElement) {
       styleElement.remove();
     }

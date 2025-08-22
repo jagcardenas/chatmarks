@@ -148,7 +148,7 @@ export class ShortcutActions {
 
     try {
       const result = await this.bookmarkOperations.navigateToNextBookmark();
-      
+
       if (result.success) {
         console.debug('Chatmarks: Successfully navigated to next bookmark');
         // Optionally show a brief notification to user
@@ -175,7 +175,7 @@ export class ShortcutActions {
 
     try {
       const result = await this.bookmarkOperations.navigateToPreviousBookmark();
-      
+
       if (result.success) {
         console.debug('Chatmarks: Successfully navigated to previous bookmark');
         this.showNavigationFeedback('Previous bookmark');
@@ -289,7 +289,7 @@ export class ShortcutActions {
     const toast = document.createElement('div');
     toast.className = 'chatmarks-navigation-feedback';
     toast.textContent = message;
-    
+
     // Apply styles for visibility and positioning
     Object.assign(toast.style, {
       position: 'fixed',
@@ -322,7 +322,7 @@ export class ShortcutActions {
     setTimeout(() => {
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(-10px)';
-      
+
       setTimeout(() => {
         if (toast.parentNode) {
           toast.parentNode.removeChild(toast);

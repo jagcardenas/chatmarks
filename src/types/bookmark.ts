@@ -226,10 +226,8 @@ export type NavigationDirection = 'next' | 'previous';
 export interface ScrollOptions {
   /** Scrolling behavior type */
   behavior?: ScrollBehavior;
-  
   /** Block alignment for scrolling */
   block?: ScrollLogicalPosition;
-  
   /** Inline alignment for scrolling */
   inline?: ScrollLogicalPosition;
 }
@@ -240,16 +238,14 @@ export interface ScrollOptions {
 export interface NavigationResult {
   /** Whether the navigation was successful */
   success: boolean;
-  
   /** The bookmark that was navigated to */
   bookmark?: Bookmark;
-  
+
   /** Error message if navigation failed */
   error?: string;
-  
+
   /** Time taken for the navigation in milliseconds */
   duration?: number;
-  
   /** Whether this navigation crossed conversation boundaries */
   crossConversation?: boolean;
 }
@@ -260,16 +256,14 @@ export interface NavigationResult {
 export interface BookmarkPosition {
   /** The bookmark */
   bookmark: Bookmark;
-  
   /** Index in the ordered bookmark list */
   index: number;
-  
+
   /** DOM element where the bookmark is anchored */
   element?: Element;
-  
+
   /** Whether the element is currently visible in viewport */
   isVisible?: boolean;
-  
   /** Distance from current viewport (for performance optimization) */
   distanceFromViewport?: number;
 }
@@ -280,16 +274,14 @@ export interface BookmarkPosition {
 export interface NavigationState {
   /** Currently active conversation ID */
   currentConversationId: string;
-  
   /** Ordered list of bookmarks for navigation */
   bookmarks: Bookmark[];
-  
+
   /** Index of currently active bookmark (-1 if none) */
   currentIndex: number;
-  
+
   /** Whether navigation is currently in progress */
   isNavigating: boolean;
-  
   /** Last navigation timestamp */
   lastNavigationTime?: number;
 }
@@ -300,13 +292,11 @@ export interface NavigationState {
 export interface URLChangeEvent {
   /** The bookmark ID from the URL hash */
   bookmarkId: string | null;
-  
   /** The full URL */
   url: string;
-  
+
   /** The hash fragment */
   hash: string;
-  
   /** Whether this was a programmatic change */
   programmatic?: boolean;
 }
@@ -317,19 +307,17 @@ export interface URLChangeEvent {
 export interface NavigationConfig {
   /** Enable/disable smooth scrolling animations */
   enableSmoothScrolling?: boolean;
-  
   /** Duration of highlight animations in milliseconds */
   highlightDuration?: number;
-  
+
   /** Enable/disable URL state management */
   enableURLState?: boolean;
-  
+
   /** Enable/disable cross-conversation navigation */
   enableCrossConversation?: boolean;
-  
+
   /** Scroll offset from top when centering elements */
   scrollOffset?: number;
-  
   /** Debounce delay for rapid navigation calls */
   navigationDebounce?: number;
 }

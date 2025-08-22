@@ -11,13 +11,13 @@ import { URLChangeEvent } from '../../types/bookmark';
 interface URLStateManagerConfig {
   /** Enable/disable URL state management */
   enabled?: boolean;
-  
+
   /** Prefix for bookmark fragment identifiers */
   bookmarkPrefix?: string;
-  
+
   /** Enable/disable history state management */
   useHistoryAPI?: boolean;
-  
+
   /** Debounce delay for URL change events */
   debounceDelay?: number;
 }
@@ -52,7 +52,7 @@ export class URLStateManager {
   private setupEventListeners(): void {
     // Listen for hash changes (direct URL changes)
     window.addEventListener('hashchange', this.handleHashChange.bind(this));
-    
+
     // Listen for popstate events (browser back/forward)
     if (this.config.useHistoryAPI) {
       window.addEventListener('popstate', this.handlePopState.bind(this));
@@ -145,7 +145,10 @@ export class URLStateManager {
    * @param bookmarkId - The bookmark ID from the URL
    * @param eventData - Additional event data
    */
-  private notifyCallbacks(bookmarkId: string | null, eventData: Partial<URLChangeEvent>): void {
+  private notifyCallbacks(
+    bookmarkId: string | null,
+    eventData: Partial<URLChangeEvent>
+  ): void {
     if (this.currentBookmarkId === bookmarkId) {
       return; // No change
     }
@@ -166,7 +169,7 @@ export class URLStateManager {
         ...eventData,
       };
 
-      this.changeCallbacks.forEach((callback) => {
+      this.changeCallbacks.forEach(callback => {
         try {
           callback(bookmarkId);
         } catch (error) {
@@ -190,7 +193,7 @@ export class URLStateManager {
 
     try {
       const hash = `#${this.config.bookmarkPrefix}${bookmarkId}`;
-      
+
       if (window.location.hash !== hash) {
         if (this.config.useHistoryAPI) {
           // Use pushState to add to browser history
@@ -200,7 +203,7 @@ export class URLStateManager {
           // Direct hash update (no history entry)
           window.location.hash = hash;
         }
-        
+
         this.currentBookmarkId = bookmarkId;
       }
     } catch (error) {
@@ -217,13 +220,13 @@ export class URLStateManager {
    */
   getBookmarkFromURL(): string | null {
     const hash = window.location.hash;
-    
+
     if (!hash || !hash.startsWith('#')) {
       return null;
     }
 
     const fragment = hash.substring(1);
-    
+
     if (fragment.startsWith(this.config.bookmarkPrefix)) {
       return fragment.substring(this.config.bookmarkPrefix.length);
     }
@@ -249,7 +252,7 @@ export class URLStateManager {
         } else {
           window.location.hash = '';
         }
-        
+
         this.currentBookmarkId = null;
       }
     } catch (error) {
@@ -267,7 +270,7 @@ export class URLStateManager {
    */
   subscribeToURLChanges(callback: URLChangeCallback): () => void {
     this.changeCallbacks.add(callback);
-    
+
     // Immediately notify with current state
     if (this.currentBookmarkId) {
       callback(this.currentBookmarkId);
@@ -294,7 +297,7 @@ export class URLStateManager {
     try {
       const hash = `#${this.config.bookmarkPrefix}${bookmarkId}`;
       const url = `${window.location.pathname}${window.location.search}${hash}`;
-      
+
       history.replaceState({ bookmarkId }, '', url);
       this.currentBookmarkId = bookmarkId;
     } catch (error) {
@@ -365,7 +368,38 @@ export class URLStateManager {
     }
 
     const fragment = hash.substring(1);
-    return fragment.startsWith(this.config.bookmarkPrefix) && fragment.length > this.config.bookmarkPrefix.length;
+    return (
+      fragment.startsWith(this.config.bookmarkPrefix) &&
+      fragment.length > this.config.bookmarkPrefix.length
+    );
+  }
+
+  /**
+   * Extracts bookmark ID from the current URL hash.
+   * Alias for getBookmarkFromURL() for test compatibility.
+   *
+   * @returns The bookmark ID without prefix or null if not found
+   */
+  extractBookmarkIdFromURL(): string | null {
+    return this.getBookmarkFromURL();
+  }
+
+  /**
+   * Unsubscribes a callback from URL change events.
+   *
+   * @param callback - The callback to remove
+   */
+  unsubscribeFromURLChanges(callback: URLChangeCallback): void {
+    this.changeCallbacks.delete(callback);
+  }
+
+  /**
+   * Gets the number of active subscribers.
+   *
+   * @returns Number of subscribed callbacks
+   */
+  getSubscriberCount(): number {
+    return this.changeCallbacks.size;
   }
 
   /**
@@ -398,7 +432,7 @@ export class URLStateManager {
    */
   updateConfig(newConfig: Partial<URLStateManagerConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Re-read current state if enabling
     if (newConfig.enabled && !this.config.enabled) {
       this.currentBookmarkId = this.getBookmarkFromURL();

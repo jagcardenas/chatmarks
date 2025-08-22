@@ -13,7 +13,10 @@ import { ChatGPTAdapter, createPlatformAdapter } from './adapters';
 import { HighlightRenderer } from './ui/highlights/HighlightRenderer';
 import { KeyboardManager } from './keyboard/KeyboardManager';
 import { ThemeManager } from './utils/ThemeManager';
-import { detectCurrentPlatform, extractConversationId } from './utils/PlatformUtils';
+import {
+  detectCurrentPlatform,
+  extractConversationId,
+} from './utils/PlatformUtils';
 import { UIManager } from './UIManager';
 import { SelectionManager } from './SelectionManager';
 import { BookmarkOperations } from './BookmarkOperations';

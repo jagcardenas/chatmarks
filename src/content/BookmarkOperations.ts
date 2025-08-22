@@ -27,7 +27,7 @@ export class BookmarkOperations {
   private highlightRenderer: HighlightRenderer;
   private platformAdapter: ChatGPTAdapter | null;
   private currentPlatform: Platform;
-  
+
   // Navigation controller will be set by ContentScriptInitializer
   private navigationController: any = null;
 
@@ -323,24 +323,27 @@ export class BookmarkOperations {
    */
   async navigateToBookmark(bookmarkId: string): Promise<NavigationResult> {
     const startTime = performance.now();
-    
+
     try {
       // Use NavigationController if available for enhanced navigation
       if (this.navigationController) {
-        const success = await this.navigationController.navigateToBookmark(bookmarkId);
+        const success =
+          await this.navigationController.navigateToBookmark(bookmarkId);
         const duration = performance.now() - startTime;
-        
+
         return {
           success,
           duration,
-          error: success ? undefined : 'Navigation controller failed to navigate',
+          error: success
+            ? undefined
+            : 'Navigation controller failed to navigate',
         };
       }
 
       // Fallback to legacy navigation
       const success = await this.legacyNavigateToBookmark(bookmarkId);
       const duration = performance.now() - startTime;
-      
+
       return {
         success,
         duration,
@@ -349,11 +352,12 @@ export class BookmarkOperations {
     } catch (error) {
       const duration = performance.now() - startTime;
       console.error('Chatmarks: Error navigating to bookmark', error);
-      
+
       return {
         success: false,
         duration,
-        error: error instanceof Error ? error.message : 'Unknown navigation error',
+        error:
+          error instanceof Error ? error.message : 'Unknown navigation error',
       };
     }
   }
@@ -395,7 +399,11 @@ export class BookmarkOperations {
         // Flash the highlight using HighlightRenderer
         const bookmark = bookmarks.find(b => b.id === bookmarkId);
         if (bookmark) {
-          await this.highlightRenderer.renderHighlight(bookmark, undefined, true);
+          await this.highlightRenderer.renderHighlight(
+            bookmark,
+            undefined,
+            true
+          );
         }
 
         return true;
@@ -416,12 +424,12 @@ export class BookmarkOperations {
    */
   async navigateToNextBookmark(): Promise<NavigationResult> {
     const startTime = performance.now();
-    
+
     if (this.navigationController) {
       try {
         const success = await this.navigationController.navigateNext();
         const duration = performance.now() - startTime;
-        
+
         return {
           success,
           duration,
@@ -432,11 +440,12 @@ export class BookmarkOperations {
         return {
           success: false,
           duration,
-          error: error instanceof Error ? error.message : 'Next navigation failed',
+          error:
+            error instanceof Error ? error.message : 'Next navigation failed',
         };
       }
     }
-    
+
     return {
       success: false,
       duration: performance.now() - startTime,
@@ -451,12 +460,12 @@ export class BookmarkOperations {
    */
   async navigateToPreviousBookmark(): Promise<NavigationResult> {
     const startTime = performance.now();
-    
+
     if (this.navigationController) {
       try {
         const success = await this.navigationController.navigatePrevious();
         const duration = performance.now() - startTime;
-        
+
         return {
           success,
           duration,
@@ -467,11 +476,14 @@ export class BookmarkOperations {
         return {
           success: false,
           duration,
-          error: error instanceof Error ? error.message : 'Previous navigation failed',
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Previous navigation failed',
         };
       }
     }
-    
+
     return {
       success: false,
       duration: performance.now() - startTime,
@@ -496,7 +508,7 @@ export class BookmarkOperations {
         totalBookmarks: this.navigationController.getCurrentBookmarks().length,
       };
     }
-    
+
     return {
       hasNavigationController: false,
     };

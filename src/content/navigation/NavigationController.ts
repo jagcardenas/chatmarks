@@ -41,7 +41,7 @@ export class NavigationController {
     this.storageService = storageService;
     this.bookmarkOperations = bookmarkOperations;
     this.conversationId = conversationId;
-    
+
     // Set up default configuration
     this.config = {
       enableSmoothScrolling: true,
@@ -86,7 +86,7 @@ export class NavigationController {
   async initialize(): Promise<void> {
     try {
       await this.loadBookmarksForConversation();
-      
+
       // Check if URL has a bookmark fragment on load
       if (this.config.enableURLState) {
         const urlBookmarkId = this.urlStateManager.getBookmarkFromURL();
@@ -126,14 +126,14 @@ export class NavigationController {
    */
   private updateBookmarkPositions(): void {
     this.bookmarkPositions.clear();
-    
+
     this.state.bookmarks.forEach((bookmark, index) => {
       const position: BookmarkPosition = {
         bookmark,
         index,
         element: this.findBookmarkElement(bookmark) || undefined,
       };
-      
+
       this.bookmarkPositions.set(bookmark.id, position);
     });
   }
@@ -155,7 +155,7 @@ export class NavigationController {
           XPathResult.FIRST_ORDERED_NODE_TYPE,
           null
         );
-        
+
         if (result.singleNodeValue) {
           return result.singleNodeValue as Element;
         }
@@ -165,7 +165,7 @@ export class NavigationController {
       const messageElement = document.querySelector(
         `[data-message-id="${bookmark.messageId}"]`
       );
-      
+
       if (messageElement) {
         return messageElement;
       }
@@ -221,7 +221,7 @@ export class NavigationController {
 
     try {
       const position = this.bookmarkPositions.get(bookmarkId);
-      
+
       if (!position) {
         console.warn('NavigationController: Bookmark not found:', bookmarkId);
         return false;
@@ -233,11 +233,15 @@ export class NavigationController {
 
       // Find element if not already cached
       if (!position.element) {
-        position.element = this.findBookmarkElement(position.bookmark) || undefined;
+        position.element =
+          this.findBookmarkElement(position.bookmark) || undefined;
       }
 
       if (!position.element) {
-        console.warn('NavigationController: Element not found for bookmark:', bookmarkId);
+        console.warn(
+          'NavigationController: Element not found for bookmark:',
+          bookmarkId
+        );
         return false;
       }
 
@@ -256,7 +260,11 @@ export class NavigationController {
       }
 
       const duration = performance.now() - startTime;
-      console.debug('NavigationController: Navigation completed in', duration, 'ms');
+      console.debug(
+        'NavigationController: Navigation completed in',
+        duration,
+        'ms'
+      );
 
       return true;
     } catch (error) {
@@ -279,7 +287,7 @@ export class NavigationController {
     }
 
     const nextIndex = this.state.currentIndex + 1;
-    
+
     if (nextIndex >= this.state.bookmarks.length) {
       console.debug('NavigationController: Already at last bookmark');
       return false;
@@ -303,7 +311,7 @@ export class NavigationController {
     }
 
     const prevIndex = this.state.currentIndex - 1;
-    
+
     if (prevIndex < 0) {
       console.debug('NavigationController: Already at first bookmark');
       return false;
@@ -321,7 +329,9 @@ export class NavigationController {
    *
    * @param bookmarkId - The bookmark ID from the URL hash
    */
-  private async handleURLBookmarkChange(bookmarkId: string | null): Promise<void> {
+  private async handleURLBookmarkChange(
+    bookmarkId: string | null
+  ): Promise<void> {
     if (bookmarkId && !this.navigationInProgress) {
       await this.navigateToBookmark(bookmarkId);
     }
@@ -400,8 +410,111 @@ export class NavigationController {
     this.conversationId = conversationId;
     this.state.currentConversationId = conversationId;
     this.state.currentIndex = -1;
-    
+
     await this.loadBookmarksForConversation();
+  }
+
+  /**
+   * Synchronous version of navigateToBookmark for testing.
+   */
+  navigateToBookmarkSync(bookmarkId: string): boolean {
+    const position = this.bookmarkPositions.get(bookmarkId);
+
+    if (!position) {
+      return false;
+    }
+
+    this.state.currentIndex = position.index;
+    this.state.lastNavigationTime = Date.now();
+    return true;
+  }
+
+  /**
+   * Synchronous version of navigateNext for testing.
+   */
+  navigateNextSync(): boolean {
+    if (this.state.bookmarks.length === 0) {
+      return false;
+    }
+
+    const nextIndex = this.state.currentIndex + 1;
+
+    if (nextIndex >= this.state.bookmarks.length) {
+      return false;
+    }
+
+    this.state.currentIndex = nextIndex;
+    this.state.lastNavigationTime = Date.now();
+    return true;
+  }
+
+  /**
+   * Synchronous version of navigatePrevious for testing.
+   */
+  navigatePreviousSync(): boolean {
+    if (this.state.bookmarks.length === 0) {
+      return false;
+    }
+
+    const prevIndex = this.state.currentIndex - 1;
+
+    if (prevIndex < 0) {
+      return false;
+    }
+
+    this.state.currentIndex = prevIndex;
+    this.state.lastNavigationTime = Date.now();
+    return true;
+  }
+
+  /**
+   * Sets the current bookmark index (for testing).
+   */
+  setCurrentBookmarkIndex(index: number): void {
+    if (index < -1 || index >= this.state.bookmarks.length) {
+      this.state.currentIndex = -1;
+    } else {
+      this.state.currentIndex = index;
+    }
+  }
+
+  /**
+   * Gets a bookmark position by ID.
+   */
+  getBookmarkPosition(bookmarkId: string): BookmarkPosition | null {
+    return this.bookmarkPositions.get(bookmarkId) || null;
+  }
+
+  /**
+   * Updates the conversation ID.
+   */
+  async updateConversationId(conversationId: string): Promise<void> {
+    this.conversationId = conversationId;
+    this.state.currentConversationId = conversationId;
+    this.state.currentIndex = -1;
+    this.bookmarkPositions.clear();
+    await this.loadBookmarksForConversation();
+  }
+
+  /**
+   * Gets the current conversation ID.
+   */
+  getCurrentConversationId(): string {
+    return this.conversationId;
+  }
+
+  /**
+   * Checks if there is a next bookmark available.
+   */
+  hasNext(): boolean {
+    return this.state.currentIndex < this.state.bookmarks.length - 1;
+  }
+
+  /**
+   * Checks if there is a previous bookmark available.
+   */
+  hasPrevious(): boolean {
+    return this.state.currentIndex > 0;
   }
 
   /**
@@ -431,7 +544,7 @@ export class NavigationController {
     // Clean up sub-components
     this.smoothScroller.cleanup();
     this.urlStateManager.cleanup();
-    
+
     // Clear state
     this.bookmarkPositions.clear();
     this.state.bookmarks = [];
