@@ -534,8 +534,9 @@ export class AnchorSystem {
         default:
           return null;
       }
-    } catch {
+    } catch (error) {
       // Strategy failed, return null to try next strategy
+      console.debug('Chatmarks: Anchor strategy failed:', error);
       return null;
     }
   }

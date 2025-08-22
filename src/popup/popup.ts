@@ -51,8 +51,9 @@ async function applyAccentFromSettings(): Promise<void> {
       const light = toRGBA(accent, 0.15);
       document.documentElement.style.setProperty('--cm-primary-100', light);
     }
-  } catch {
-    // no-op fallback to defaults
+  } catch (error) {
+    // Failed to apply accent theme - fallback to defaults
+    console.warn('Chatmarks: Failed to apply accent theme:', error);
   }
 }
 

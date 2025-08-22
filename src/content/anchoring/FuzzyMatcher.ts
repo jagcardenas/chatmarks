@@ -251,7 +251,12 @@ export class FuzzyMatcher {
       }
 
       return null;
-    } catch {
+    } catch (error) {
+      // Failed to create range from fuzzy match
+      console.warn(
+        'Chatmarks: Failed to create range from fuzzy match:',
+        error
+      );
       return null;
     }
   }

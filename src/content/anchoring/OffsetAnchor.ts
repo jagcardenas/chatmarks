@@ -117,7 +117,9 @@ export class OffsetAnchor {
       }
 
       return null;
-    } catch {
+    } catch (error) {
+      // Failed to find text by offset
+      console.warn('Chatmarks: Failed to find text by offset:', error);
       return null;
     }
   }

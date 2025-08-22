@@ -74,8 +74,9 @@ async function initializeContentScript(): Promise<void> {
       type: MessageType.PLATFORM_DETECTED,
       data: { platform: currentPlatform },
     } as ExtensionMessage);
-  } catch {
-    // Failed to initialize content script - silent failure
+  } catch (error) {
+    // Failed to initialize content script - log error for debugging
+    console.error('Chatmarks: Failed to initialize content script:', error);
   }
 }
 
@@ -106,8 +107,9 @@ async function applyThemeFromSettings(): Promise<void> {
       );
       appliedHighlight = highlight;
     }
-  } catch {
-    // ignore, keep defaults defined in styles.css
+  } catch (error) {
+    // Failed to apply theme - log error and keep defaults defined in styles.css
+    console.warn('Chatmarks: Failed to apply theme from settings:', error);
   }
 }
 

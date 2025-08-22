@@ -92,8 +92,9 @@ export class XPathAnchor {
       );
 
       return result.singleNodeValue as Element;
-    } catch {
+    } catch (error) {
       // XPath evaluation failed - likely due to invalid syntax or DOM changes
+      console.warn('Chatmarks: XPath evaluation failed:', error);
       return null;
     }
   }
@@ -136,7 +137,9 @@ export class XPathAnchor {
 
       // XPath is syntactically valid if evaluation doesn't throw
       return true;
-    } catch {
+    } catch (error) {
+      // XPath validation failed
+      console.warn('Chatmarks: XPath validation failed:', error);
       return false;
     }
   }
@@ -268,7 +271,12 @@ export class XPathAnchor {
       range.setEnd(textNode, startIndex + textContent.length);
 
       return range;
-    } catch {
+    } catch (error) {
+      // Failed to create range from XPath and text
+      console.warn(
+        'Chatmarks: Failed to create range from XPath and text:',
+        error
+      );
       return null;
     }
   }
