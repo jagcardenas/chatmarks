@@ -22,6 +22,10 @@ let floatingButtonEl: HTMLButtonElement | null = null;
 let dialogContainerEl: HTMLDivElement | null = null;
 let dialogOverlayEl: HTMLDivElement | null = null;
 
+// Theme cache
+let appliedAccent: string | null = null;
+let appliedHighlight: string | null = null;
+
 /**
  * Creates a basic anchor for selections without full anchor data
  */
@@ -64,6 +68,9 @@ async function initializeContentScript(): Promise<void> {
     // Set up keyboard shortcuts
     setupKeyboardShortcuts();
 
+    // Apply theme from settings
+    await applyThemeFromSettings();
+
     // Initialize platform-specific adapter (will be implemented in later tasks)
     // const adapter = await createPlatformAdapter(currentPlatform);
 
@@ -75,6 +82,77 @@ async function initializeContentScript(): Promise<void> {
   } catch {
     // Failed to initialize content script - silent failure
   }
+}
+
+/**
+ * Apply accent and highlight color from saved settings to CSS variables
+ */
+async function applyThemeFromSettings(): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get('settings');
+    const settings = result?.settings || {};
+    const accent = (settings.accentColor as string) || '#2563eb';
+    const highlight = (settings.highlightColor as string) || '#ffeb3b';
+
+    if (accent !== appliedAccent) {
+      document.documentElement.style.setProperty('--chatmarks-primary', accent);
+      const darker = shadeColor(accent, -12);
+      document.documentElement.style.setProperty(
+        '--chatmarks-primary-hover',
+        darker
+      );
+      appliedAccent = accent;
+    }
+
+    if (highlight !== appliedHighlight) {
+      document.documentElement.style.setProperty(
+        '--chatmarks-highlight',
+        highlight
+      );
+      appliedHighlight = highlight;
+    }
+  } catch {
+    // ignore, keep defaults defined in styles.css
+  }
+}
+
+function shadeColor(hex: string, percent: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent) / 100;
+  const R = Math.round((t - r) * p + r);
+  const G = Math.round((t - g) * p + g);
+  const B = Math.round((t - b) * p + b);
+  return rgbToHex(R, G, B);
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const normalized = hex.replace('#', '');
+  const bigint = parseInt(
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map(c => c + c)
+          .join('')
+      : normalized,
+    16
+  );
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return { r, g, b };
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return (
+    '#' +
+    [r, g, b]
+      .map(x => {
+        const h = x.toString(16);
+        return h.length === 1 ? '0' + h : h;
+      })
+      .join('')
+  );
 }
 
 /**
@@ -157,11 +235,11 @@ function showBookmarkCreationUI(event: MouseEvent): void {
     floatingButtonEl.style.zIndex = '2147483647';
     floatingButtonEl.style.padding = '6px 10px';
     floatingButtonEl.style.fontSize = '12px';
-    floatingButtonEl.style.border = '1px solid rgba(0,0,0,0.15)';
+    floatingButtonEl.style.border = '1px solid var(--chatmarks-border)';
     floatingButtonEl.style.borderRadius = '6px';
-    floatingButtonEl.style.background = '#111827';
+    floatingButtonEl.style.background = 'var(--chatmarks-primary)';
     floatingButtonEl.style.color = '#fff';
-    floatingButtonEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+    floatingButtonEl.style.boxShadow = 'var(--chatmarks-shadow)';
     floatingButtonEl.style.cursor = 'pointer';
     floatingButtonEl.style.userSelect = 'none';
     floatingButtonEl.addEventListener('mousedown', e => e.preventDefault());
@@ -255,10 +333,10 @@ function openBookmarkDialog(): void {
     dialogContainerEl.style.minWidth = '320px';
     dialogContainerEl.style.maxWidth = '480px';
     dialogContainerEl.style.background = '#ffffff';
-    dialogContainerEl.style.color = '#111827';
-    dialogContainerEl.style.border = '1px solid rgba(0,0,0,0.1)';
+    dialogContainerEl.style.color = 'var(--chatmarks-text)';
+    dialogContainerEl.style.border = '1px solid var(--chatmarks-border)';
     dialogContainerEl.style.borderRadius = '8px';
-    dialogContainerEl.style.boxShadow = '0 12px 24px rgba(0,0,0,0.2)';
+    dialogContainerEl.style.boxShadow = 'var(--chatmarks-shadow)';
     dialogContainerEl.style.zIndex = '2147483647';
     dialogContainerEl.style.padding = '12px';
     dialogContainerEl.style.display = 'flex';
@@ -273,9 +351,9 @@ function openBookmarkDialog(): void {
     const selectedPreview = document.createElement('div');
     selectedPreview.textContent = `"${currentSelection.selectedText.slice(0, 140)}${currentSelection.selectedText.length > 140 ? '…' : ''}"`;
     selectedPreview.style.fontSize = '12px';
-    selectedPreview.style.color = '#4b5563';
-    selectedPreview.style.background = '#f9fafb';
-    selectedPreview.style.border = '1px solid #e5e7eb';
+    selectedPreview.style.color = 'var(--chatmarks-text-secondary)';
+    selectedPreview.style.background = 'var(--chatmarks-secondary)';
+    selectedPreview.style.border = '1px solid var(--chatmarks-border)';
     selectedPreview.style.borderRadius = '6px';
     selectedPreview.style.padding = '8px';
     selectedPreview.style.maxHeight = '96px';
@@ -284,7 +362,7 @@ function openBookmarkDialog(): void {
     const noteLabel = document.createElement('label');
     noteLabel.textContent = 'Note (optional)';
     noteLabel.style.fontSize = '12px';
-    noteLabel.style.color = '#374151';
+    noteLabel.style.color = 'var(--chatmarks-text)';
 
     const noteInput = document.createElement('textarea');
     noteInput.placeholder = 'Add a short note';
@@ -293,7 +371,7 @@ function openBookmarkDialog(): void {
     noteInput.style.resize = 'vertical';
     noteInput.style.fontSize = '12px';
     noteInput.style.padding = '8px';
-    noteInput.style.border = '1px solid #e5e7eb';
+    noteInput.style.border = '1px solid var(--chatmarks-border)';
     noteInput.style.borderRadius = '6px';
     noteInput.style.outline = 'none';
 
@@ -306,19 +384,19 @@ function openBookmarkDialog(): void {
     cancelBtn.textContent = 'Cancel';
     cancelBtn.style.padding = '6px 10px';
     cancelBtn.style.fontSize = '12px';
-    cancelBtn.style.border = '1px solid #e5e7eb';
+    cancelBtn.style.border = '1px solid var(--chatmarks-border)';
     cancelBtn.style.borderRadius = '6px';
     cancelBtn.style.background = '#ffffff';
-    cancelBtn.style.color = '#111827';
+    cancelBtn.style.color = 'var(--chatmarks-text)';
     cancelBtn.addEventListener('click', () => closeBookmarkDialog());
 
     const saveBtn = document.createElement('button');
     saveBtn.textContent = 'Save Bookmark';
     saveBtn.style.padding = '6px 10px';
     saveBtn.style.fontSize = '12px';
-    saveBtn.style.border = '1px solid rgba(0,0,0,0.15)';
+    saveBtn.style.border = '1px solid var(--chatmarks-border)';
     saveBtn.style.borderRadius = '6px';
-    saveBtn.style.background = '#111827';
+    saveBtn.style.background = 'var(--chatmarks-primary)';
     saveBtn.style.color = '#ffffff';
     saveBtn.addEventListener('click', async () => {
       await saveBookmark(noteInput.value.trim());

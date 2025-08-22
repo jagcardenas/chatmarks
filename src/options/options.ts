@@ -11,6 +11,7 @@ interface ExtensionSettings {
   highlightColor: string;
   showMinimap: boolean;
   sidebarPosition: 'left' | 'right';
+  accentColor?: string;
   keyboardShortcuts: {
     createBookmark: string;
     nextBookmark: string;
@@ -29,6 +30,7 @@ const DEFAULT_SETTINGS: ExtensionSettings = {
   highlightColor: '#ffeb3b',
   showMinimap: true,
   sidebarPosition: 'right',
+  accentColor: '#2563eb',
   keyboardShortcuts: {
     createBookmark: 'Ctrl+B',
     nextBookmark: 'Alt+ArrowDown',
@@ -74,11 +76,16 @@ async function loadSettings(): Promise<void> {
     // Populate form fields with current settings
     populateForm(settings);
 
+    // Apply accent color on load
+    const accent = settings.accentColor || DEFAULT_SETTINGS.accentColor!;
+    applyAccentTheme(accent);
+
     console.log('Settings loaded:', settings);
   } catch (error) {
     console.error('Failed to load settings:', error);
     // Fall back to default settings
     populateForm(DEFAULT_SETTINGS);
+    applyAccentTheme(DEFAULT_SETTINGS.accentColor!);
   }
 }
 
@@ -89,6 +96,8 @@ function populateForm(settings: ExtensionSettings): void {
   // Appearance settings
   (document.getElementById('highlight-color') as HTMLInputElement).value =
     settings.highlightColor;
+  const accent = settings.accentColor || DEFAULT_SETTINGS.accentColor!;
+  (document.getElementById('accent-color') as HTMLInputElement).value = accent;
   (document.getElementById('show-minimap') as HTMLInputElement).checked =
     settings.showMinimap;
   (document.getElementById('sidebar-position') as HTMLSelectElement).value =
@@ -117,6 +126,7 @@ function populateForm(settings: ExtensionSettings): void {
 
   // Update color preview
   updateColorPreview(settings.highlightColor);
+  updateNamedColorPreview('accent-color', accent);
 }
 
 /**
@@ -127,6 +137,26 @@ function updateColorPreview(color: string): void {
   if (preview) {
     preview.style.backgroundColor = color;
   }
+}
+
+function updateNamedColorPreview(name: string, color: string): void {
+  const preview = document.querySelector(
+    `.color-preview[data-preview-for="${name}"]`
+  ) as HTMLElement;
+  if (preview) {
+    preview.style.backgroundColor = color;
+  }
+}
+
+/**
+ * Apply accent theme variables to the document root
+ */
+function applyAccentTheme(color: string): void {
+  document.documentElement.style.setProperty('--cm-primary', color);
+  const darker = shadeColor(color, -12);
+  document.documentElement.style.setProperty('--cm-primary-600', darker);
+  const light = toRGBA(color, 0.15);
+  document.documentElement.style.setProperty('--cm-primary-100', light);
 }
 
 /**
@@ -167,6 +197,14 @@ function setupEventListeners(): void {
     updateColorPreview(color);
   });
 
+  // Accent color change
+  document.getElementById('accent-color')?.addEventListener('input', e => {
+    const color = (e.target as HTMLInputElement).value;
+    updateNamedColorPreview('accent-color', color);
+    // Live-apply to page for preview
+    applyAccentTheme(color);
+  });
+
   // Auto-save on form changes (if enabled)
   document.querySelectorAll('input, select').forEach(element => {
     element.addEventListener('change', handleFormChange);
@@ -196,6 +234,9 @@ async function handleSaveSettings(): Promise<void> {
 
     showSaveStatus('Settings saved successfully', 'success');
     console.log('Settings saved:', settings);
+    if (settings.accentColor) {
+      applyAccentTheme(settings.accentColor);
+    }
   } catch (error) {
     console.error('Failed to save settings:', error);
     showSaveStatus('Failed to save settings', 'error');
@@ -215,6 +256,8 @@ function collectFormData(): ExtensionSettings {
     sidebarPosition: (
       document.getElementById('sidebar-position') as HTMLSelectElement
     ).value as 'left' | 'right',
+    accentColor: (document.getElementById('accent-color') as HTMLInputElement)
+      .value,
     keyboardShortcuts: {
       createBookmark: (
         document.getElementById('create-bookmark-shortcut') as HTMLInputElement
@@ -239,6 +282,51 @@ function collectFormData(): ExtensionSettings {
   };
 }
 
+// Utility: shade a hex color by percent
+function shadeColor(hex: string, percent: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent) / 100;
+  const R = Math.round((t - r) * p + r);
+  const G = Math.round((t - g) * p + g);
+  const B = Math.round((t - b) * p + b);
+  return rgbToHex(R, G, B);
+}
+
+function toRGBA(hex: string, alpha: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const normalized = hex.replace('#', '');
+  const bigint = parseInt(
+    normalized.length === 3
+      ? normalized
+          .split('')
+          .map(c => c + c)
+          .join('')
+      : normalized,
+    16
+  );
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return { r, g, b };
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return (
+    '#' +
+    [r, g, b]
+      .map(x => {
+        const h = x.toString(16);
+        return h.length === 1 ? '0' + h : h;
+      })
+      .join('')
+  );
+}
+
 /**
  * Handle reset to defaults button click
  */
@@ -250,6 +338,7 @@ async function handleResetDefaults(): Promise<void> {
 
       showSaveStatus('Settings reset to defaults', 'success');
       console.log('Settings reset to defaults');
+      applyAccentTheme(DEFAULT_SETTINGS.accentColor!);
     } catch (error) {
       console.error('Failed to reset settings:', error);
       showSaveStatus('Failed to reset settings', 'error');
