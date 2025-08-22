@@ -1,34 +1,27 @@
 /**
  * Main entry point for the Chatmarks browser extension
+ *
+ * This file serves as the main entry point and re-exports key types and functions
+ * from the core modules for external use.
  */
 
-export interface BookmarkData {
-  id: string;
-  text: string;
-  note: string;
-  timestamp: Date;
-}
+// Re-export core types for external consumers
+export type {
+  Bookmark,
+  Platform,
+  TextAnchor,
+  CreateBookmarkData,
+  UpdateBookmarkData,
+  BookmarkFilters,
+  SelectionRange,
+  MessageElement,
+} from './types/bookmark';
 
-/**
- * Creates a new bookmark for selected text
- */
-export function createBookmark(
-  selectedText: string,
-  note?: string
-): BookmarkData {
-  return {
-    id: crypto.randomUUID(),
-    text: selectedText,
-    note: note || '',
-    timestamp: new Date(),
-  };
-}
+// Re-export message types
+export type { ExtensionMessage, MessageResponse } from './types/messages';
 
-/**
- * Validates bookmark data
- */
-export function validateBookmark(bookmark: BookmarkData): boolean {
-  return Boolean(
-    bookmark.id && bookmark.text && bookmark.timestamp instanceof Date
-  );
-}
+// Note: The main functionality is now properly implemented in the specialized modules:
+// - BookmarkManager for bookmark operations
+// - StorageService for data persistence
+// - TextSelection for text capture
+// - AnchorSystem for robust text anchoring

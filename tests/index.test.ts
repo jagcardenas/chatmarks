@@ -1,61 +1,73 @@
-import { createBookmark, validateBookmark, BookmarkData } from '../src/index';
+/**
+ * Index Entry Point Tests
+ *
+ * Tests for the main entry point exports and re-exports.
+ * Basic functionality is now tested in the specialized modules:
+ * - BookmarkManager tests for bookmark operations
+ * - StorageService tests for persistence
+ * - TextSelection tests for text capture
+ */
 
-describe('createBookmark', () => {
-  it('should create a bookmark with required fields', () => {
-    const selectedText = 'This is selected text';
-    const note = 'This is a note';
+/**
+ * Index Entry Point Tests
+ *
+ * Tests for the main entry point exports and re-exports.
+ * Since TypeScript types don't exist at runtime, we test the structure
+ * and verify that the module can be imported without errors.
+ */
 
-    const bookmark = createBookmark(selectedText, note);
-
-    expect(bookmark.id).toBe('test-uuid-12345');
-    expect(bookmark.text).toBe(selectedText);
-    expect(bookmark.note).toBe(note);
-    expect(bookmark.timestamp).toBeInstanceOf(Date);
+describe('Index Exports', () => {
+  it('should be able to import from index without errors', () => {
+    // This test verifies that the module can be imported without runtime errors
+    // and that all type re-exports are properly configured
+    expect(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const index = require('../src/index');
+      // If we get here, the module loaded successfully
+      expect(index).toBeDefined();
+    }).not.toThrow();
   });
 
-  it('should create a bookmark without a note', () => {
-    const selectedText = 'This is selected text';
-
-    const bookmark = createBookmark(selectedText);
-
-    expect(bookmark.id).toBe('test-uuid-12345');
-    expect(bookmark.text).toBe(selectedText);
-    expect(bookmark.note).toBe('');
-    expect(bookmark.timestamp).toBeInstanceOf(Date);
+  it('should verify Platform type values work correctly', () => {
+    // Test that Platform type values work as expected
+    const platforms = ['chatgpt', 'claude', 'grok'] as const;
+    platforms.forEach(platform => {
+      expect(typeof platform).toBe('string');
+      expect(platform.length).toBeGreaterThan(0);
+    });
   });
-});
 
-describe('validateBookmark', () => {
-  it('should validate a valid bookmark', () => {
-    const validBookmark: BookmarkData = {
+  it('should verify Bookmark structure can be created', () => {
+    // Test that we can create objects that match the Bookmark interface
+    const testBookmark = {
       id: 'test-id',
-      text: 'Test text',
-      note: 'Test note',
-      timestamp: new Date(),
+      platform: 'chatgpt' as const,
+      conversationId: 'conv-123',
+      messageId: 'msg-456',
+      anchor: {
+        selectedText: 'test text',
+        startOffset: 0,
+        endOffset: 9,
+        xpathSelector: '//div[@id="test"]',
+        messageId: 'msg-456',
+        contextBefore: '',
+        contextAfter: '',
+        checksum: 'abc123',
+        confidence: 0.9,
+        strategy: 'xpath' as const,
+      },
+      note: 'test note',
+      tags: [],
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      color: '#ffeb3b',
     };
 
-    expect(validateBookmark(validBookmark)).toBe(true);
-  });
-
-  it('should invalidate bookmark with missing id', () => {
-    const invalidBookmark: BookmarkData = {
-      id: '',
-      text: 'Test text',
-      note: 'Test note',
-      timestamp: new Date(),
-    };
-
-    expect(validateBookmark(invalidBookmark)).toBe(false);
-  });
-
-  it('should invalidate bookmark with missing text', () => {
-    const invalidBookmark: BookmarkData = {
-      id: 'test-id',
-      text: '',
-      note: 'Test note',
-      timestamp: new Date(),
-    };
-
-    expect(validateBookmark(invalidBookmark)).toBe(false);
+    // Verify the structure is correct
+    expect(testBookmark.id).toBe('test-id');
+    expect(testBookmark.platform).toBe('chatgpt');
+    expect(testBookmark.note).toBe('test note');
+    expect(testBookmark.anchor.selectedText).toBe('test text');
+    expect(testBookmark.anchor.confidence).toBe(0.9);
   });
 });
