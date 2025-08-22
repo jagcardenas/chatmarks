@@ -8,14 +8,10 @@
 import './styles.css';
 import { Platform, SelectionRange, TextAnchor } from '../types/bookmark';
 import { MessageType, ExtensionMessage } from '../types/messages';
-import {
-  TextSelectionManager,
-  PlatformTextSelection,
-} from '../utils/text-selection';
+import { TextSelection } from './selection/TextSelection';
 
-// Global instances for text selection management
-let selectionManager: TextSelectionManager;
-let platformSelection: PlatformTextSelection;
+// Global instance for text selection management
+let textSelection: TextSelection;
 let currentPlatform: Platform | null = null;
 let currentSelection: SelectionRange | null = null;
 let floatingButtonEl: HTMLButtonElement | null = null;
@@ -58,9 +54,8 @@ async function initializeContentScript(): Promise<void> {
 
     // Initialize on detected platform
 
-    // Initialize text selection managers
-    selectionManager = new TextSelectionManager();
-    platformSelection = new PlatformTextSelection();
+    // Initialize text selection manager
+    textSelection = new TextSelection();
 
     // Set up selection event listeners
     setupSelectionListeners();
@@ -187,10 +182,9 @@ function setupSelectionListeners(): void {
  * Handle text selection changes with comprehensive selection capture
  */
 function handleSelectionChange(): void {
-  if (!selectionManager || !currentPlatform) return;
+  if (!textSelection || !currentPlatform) return;
 
-  const selectionData =
-    platformSelection.getSelectionForPlatform(currentPlatform);
+  const selectionData = textSelection.captureRange();
 
   if (!selectionData) {
     // Hide any visible bookmark creation UI

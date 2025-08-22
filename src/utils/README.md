@@ -1,53 +1,34 @@
 # Utility Functions
 
 ## Purpose
-Provides core utility functions and classes for text selection, anchoring, and bookmark management across different AI platforms. These utilities handle the complex logic of capturing and restoring text selections reliably.
+Provides utility functions and classes for text selection testing and validation. The main text selection functionality has been moved to `src/content/selection/TextSelection.ts` for better architectural organization.
 
 ## Key Components
-- **text-selection.ts**: Core text selection management with multiple anchoring strategies
 - **selection-test.ts**: Comprehensive testing suite for selection functionality validation
 - **index.ts**: Central export point for all utility functions
 
 ## Functionality
-- **Text Selection Detection**: Captures user text selections with comprehensive metadata
-- **Multi-Strategy Anchoring**: XPath selectors, character offsets, and fuzzy matching for reliable positioning
-- **Platform-Specific Enhancements**: Tailored selection handling for ChatGPT, Claude, and Grok
-- **Selection Restoration**: Robust fallback system to restore selections after DOM changes
-- **Validation and Recovery**: Checksum-based validation and intelligent selection recovery
+- **Selection Testing**: Automated validation of text selection and anchoring functionality
+- **Test Suite Management**: Comprehensive test scenarios for different selection edge cases
+- **Result Reporting**: Structured test results with detailed success/failure analysis
 
 ## Integration Points
-- **Content Scripts**: Primary consumer of text selection utilities for real-time selection capture
-- **Platform Adapters**: Enhanced selection data with platform-specific context
-- **Storage System**: Persists anchor data for bookmark restoration across sessions
+- **Content Scripts**: Integration with the main TextSelection class for testing
 - **Testing Framework**: Automated validation of selection functionality across scenarios
+- **Development Tools**: Debugging and validation tools for selection system
 
 ## Performance Considerations
-- Efficient DOM traversal with TreeWalker API for character offset calculation
-- Optimized XPath generation with depth limits to prevent excessive DOM traversal
-- Cached selection data to minimize redundant processing during rapid selection changes
-- Minimal memory footprint with cleanup of temporary DOM modifications during testing
+- Efficient test execution with proper cleanup of temporary DOM modifications
+- Minimal memory footprint with cleanup of test elements and selections
+- Optimized test scenarios to avoid redundant processing
 
 ## Testing Approach
 - Automated test suite covering basic selection, multi-node selection, and restoration
-- Anchor validation tests for detecting content changes and maintaining accuracy
 - Platform-specific selection enhancement validation for each supported AI platform
-- Interactive test page (test-selection.html) for manual testing and debugging
+- Interactive test utilities for manual testing and debugging
 - Node.js unit tests for non-DOM utility functions and algorithms
 
 ## Key Classes
-
-### TextSelectionManager
-Main class for text selection operations:
-- `getCurrentSelection()`: Captures current selection with comprehensive anchoring
-- `restoreSelection(anchor)`: Restores selection using multiple fallback strategies
-- `validateAnchor(anchor)`: Verifies anchor integrity after content changes
-- `clearSelection()`: Programmatically clears current selection
-
-### PlatformTextSelection
-Platform-specific selection enhancements:
-- `getSelectionForPlatform(platform)`: Platform-enhanced selection capture
-- `restoreSelectionForPlatform(anchor, platform)`: Platform-specific restoration
-- Private methods for ChatGPT, Claude, and Grok optimizations
 
 ### SelectionTestSuite
 Comprehensive testing framework:
@@ -55,6 +36,12 @@ Comprehensive testing framework:
 - Individual test methods for different selection scenarios
 - Console logging and structured result reporting
 - Test DOM element creation and cleanup
+
+### Deprecated Classes (Removed)
+The following classes have been deprecated and replaced by `TextSelection` in `src/content/selection/`:
+
+- **TextSelectionManager**: Replaced by `TextSelection.captureRange()`
+- **PlatformTextSelection**: Platform-specific logic moved to dedicated platform adapters
 
 ## Text Anchoring Strategies
 
@@ -77,17 +64,18 @@ Comprehensive testing framework:
 
 ```typescript
 // Basic selection capture
-const manager = new TextSelectionManager();
-const selection = manager.getCurrentSelection();
+import { TextSelection } from '../content/selection/TextSelection';
+const textSelection = new TextSelection();
+const selection = textSelection.captureRange();
 
-// Platform-specific enhancements
-const platformManager = new PlatformTextSelection();
-const enhancedSelection = platformManager.getSelectionForPlatform('chatgpt');
-
-// Selection restoration
-const restored = await manager.restoreSelection(bookmark.anchor);
+// Selection restoration (requires anchor resolution)
+const restoredRange = anchorSystem.resolveAnchor(bookmark.anchor);
+if (restoredRange) {
+  textSelection.restoreSelection(restoredRange);
+}
 
 // Running tests
-import { runSelectionTests } from './utils';
-const testResults = await runSelectionTests();
+import { SelectionTestSuite } from './selection-test';
+const testSuite = new SelectionTestSuite();
+const testResults = await testSuite.runAllTests();
 ```
