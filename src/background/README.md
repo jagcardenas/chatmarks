@@ -1,17 +1,35 @@
-# Background Scripts
+# Background Service Worker - Chrome Extension Manifest V3
 
 ## Purpose
-Contains the service worker that handles extension background tasks, providing persistent functionality and coordination between different parts of the extension.
+Implements the Chrome Extension Manifest V3 service worker that orchestrates extension-wide functionality, providing context menu management, inter-context messaging, bookmark persistence, and settings management through a streamlined, ephemeral background process.
 
 ## Key Components
-- **service-worker.ts**: Main service worker handling extension lifecycle, context menus, message routing, and storage operations
+- **service-worker.ts**: Manifest V3 compliant service worker with full StorageService integration, context menu management, and comprehensive message routing
 
-## Functionality
-- **Context Menu Management**: Creates and handles right-click bookmark creation options
-- **Inter-Context Messaging**: Routes messages between content scripts, popup, and options pages
-- **Bookmark Persistence (mock)**: Handles `CREATE_BOOKMARK` by saving to `chrome.storage.local` under `bookmarks`
-- **Settings Management**: Handles extension settings persistence and retrieval
-- **Extension Lifecycle**: Manages installation, startup, and configuration initialization
+## Implemented Functionality (Task 2 + Context Menu Integration)
+
+### **Context Menu Management**
+- **Dynamic Menu Creation**: "Create Bookmark" option appears only when text is selected
+- **Platform-Specific URLs**: Context menu restricted to supported AI platforms
+- **Selection Text Passing**: Passes selected text to content script for bookmark creation
+- **Permission-Based Access**: Uses `contextMenus` permission with proper document URL patterns
+
+### **Advanced Message Routing**
+- **Typed Message System**: Full TypeScript support with MessageType enumeration
+- **Async Handler Support**: Proper async/await handling with response management
+- **Error Recovery**: Comprehensive error handling with user-friendly error messages
+- **Performance Monitoring**: Built-in timing and success/failure tracking
+
+### **Integrated Storage Operations**
+- **StorageService Integration**: Uses full StorageService architecture with validation
+- **Bookmark CRUD**: Complete bookmark creation, reading, updating, deletion via background
+- **Settings Persistence**: Advanced settings management with schema validation
+- **Data Migration**: Automatic schema migration support for updates
+
+### **Extension Lifecycle Management**
+- **Installation Handling**: Sets up default settings, context menus, and initializes storage
+- **Default Configuration**: Creates default theme settings and keyboard shortcuts
+- **Service Worker Restart**: Ephemeral architecture with proper state recovery
 
 ## Integration Points
 - **Content Scripts**: Receives bookmark creation requests (`CREATE_BOOKMARK`) and navigation

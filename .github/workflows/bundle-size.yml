@@ -1,0 +1,305 @@
+name: Bundle Size Monitor
+
+on:
+  pull_request:
+    branches: [ main, development ]
+  push:
+    branches: [ main, development ]
+
+jobs:
+  bundle-size-analysis:
+    name: Bundle Size Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for comparison
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build current version
+        run: npm run build
+        
+      - name: Analyze current bundle size
+        id: current-size
+        run: |
+          npm run size-check > size-report.txt 2>&1 || true
+          
+          # Extract total size
+          total_size=$(du -sb dist/ | cut -f1)
+          echo "current_total_size=$total_size" >> $GITHUB_OUTPUT
+          
+          # Get individual file sizes
+          find dist/ -name "*.js" -exec wc -c {} + | sort -nr > js-files-current.txt
+          
+          echo "📊 Current Bundle Size Report" > bundle-report.md
+          echo "=============================" >> bundle-report.md
+          echo "" >> bundle-report.md
+          cat size-report.txt >> bundle-report.md
+          
+      - name: Build base version for comparison
+        if: github.event_name == 'pull_request'
+        run: |
+          # Checkout base branch
+          git checkout ${{ github.event.pull_request.base.sha }}
+          
+          # Install dependencies and build
+          npm ci
+          npm run build
+          
+          # Analyze base size
+          total_size_base=$(du -sb dist/ | cut -f1)
+          echo "base_total_size=$total_size_base" >> $GITHUB_OUTPUT
+          
+          # Get base file sizes
+          find dist/ -name "*.js" -exec wc -c {} + | sort -nr > js-files-base.txt
+          
+          # Return to PR branch
+          git checkout ${{ github.sha }}
+          
+        id: base-size
+        
+      - name: Compare bundle sizes
+        if: github.event_name == 'pull_request'
+        run: |
+          current_size=${{ steps.current-size.outputs.current_total_size }}
+          base_size=${{ steps.base-size.outputs.base_total_size }}
+          
+          if [ -n "$base_size" ] && [ "$base_size" -gt 0 ]; then
+            size_diff=$((current_size - base_size))
+            percentage_change=$(echo "scale=2; ($size_diff * 100) / $base_size" | bc -l)
+            
+            echo "" >> bundle-report.md
+            echo "📈 Bundle Size Comparison" >> bundle-report.md
+            echo "========================" >> bundle-report.md
+            echo "" >> bundle-report.md
+            echo "- **Base size**: $(numfmt --to=iec $base_size)" >> bundle-report.md
+            echo "- **Current size**: $(numfmt --to=iec $current_size)" >> bundle-report.md
+            echo "- **Difference**: $(numfmt --to=iec $size_diff) (${percentage_change}%)" >> bundle-report.md
+            echo "" >> bundle-report.md
+            
+            if [ "$size_diff" -gt 51200 ]; then  # 50KB increase
+              echo "⚠️ **Warning**: Bundle size increased by more than 50KB" >> bundle-report.md
+              echo "" >> bundle-report.md
+            elif [ "$size_diff" -lt -10240 ]; then  # 10KB decrease
+              echo "✅ **Great**: Bundle size decreased!" >> bundle-report.md
+              echo "" >> bundle-report.md
+            fi
+            
+            # File-by-file comparison
+            echo "### Individual File Changes" >> bundle-report.md
+            echo "" >> bundle-report.md
+            
+            if [ -f "js-files-base.txt" ] && [ -f "js-files-current.txt" ]; then
+              echo "| File | Base Size | Current Size | Change |" >> bundle-report.md
+              echo "|------|-----------|--------------|--------|" >> bundle-report.md
+              
+              # Compare JavaScript files
+              while read -r size file; do
+                if [ -f "$file" ]; then
+                  base_file_size=$(grep "$(basename "$file")" js-files-base.txt | awk '{print $1}' || echo "0")
+                  current_file_size="$size"
+                  
+                  if [ "$base_file_size" -gt 0 ]; then
+                    file_diff=$((current_file_size - base_file_size))
+                    
+                    if [ "$file_diff" -ne 0 ]; then
+                      echo "| $(basename "$file") | $(numfmt --to=iec $base_file_size) | $(numfmt --to=iec $current_file_size) | $(numfmt --to=iec $file_diff) |" >> bundle-report.md
+                    fi
+                  fi
+                fi
+              done < js-files-current.txt
+            fi
+          fi
+          
+      - name: Check size limits
+        run: |
+          current_size=${{ steps.current-size.outputs.current_total_size }}
+          
+          # Chrome Web Store limits
+          max_size=$((128 * 1024 * 1024))  # 128MB
+          target_size=$((5 * 1024 * 1024))  # 5MB target
+          
+          echo "" >> bundle-report.md
+          echo "🎯 Size Limits Check" >> bundle-report.md
+          echo "===================" >> bundle-report.md
+          echo "" >> bundle-report.md
+          
+          if [ "$current_size" -gt "$max_size" ]; then
+            echo "❌ **CRITICAL**: Bundle size exceeds Chrome Web Store limit!" >> bundle-report.md
+            echo "- Current: $(numfmt --to=iec $current_size)" >> bundle-report.md
+            echo "- Limit: $(numfmt --to=iec $max_size)" >> bundle-report.md
+            echo "" >> bundle-report.md
+            echo "This will prevent publishing to Chrome Web Store." >> bundle-report.md
+            exit 1
+          elif [ "$current_size" -gt "$target_size" ]; then
+            echo "⚠️ **Warning**: Bundle size exceeds performance target" >> bundle-report.md
+            echo "- Current: $(numfmt --to=iec $current_size)" >> bundle-report.md
+            echo "- Target: $(numfmt --to=iec $target_size)" >> bundle-report.md
+          else
+            echo "✅ Bundle size within all limits" >> bundle-report.md
+            echo "- Current: $(numfmt --to=iec $current_size)" >> bundle-report.md
+            echo "- Target: $(numfmt --to=iec $target_size)" >> bundle-report.md
+          fi
+          
+      - name: Post bundle size comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            try {
+              const report = fs.readFileSync('bundle-report.md', 'utf8');
+              
+              // Find existing comment
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+              
+              const existingComment = comments.find(comment => 
+                comment.body.includes('📊 Current Bundle Size Report')
+              );
+              
+              if (existingComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: report
+                });
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: report
+                });
+              }
+            } catch (error) {
+              console.log('Could not post bundle size comment:', error.message);
+            }
+            
+      - name: Upload bundle analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-analysis-${{ github.sha }}
+          path: |
+            bundle-report.md
+            size-report.txt
+            js-files-current.txt
+            js-files-base.txt
+          retention-days: 14
+
+  performance-budget:
+    name: Performance Budget Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build extension
+        run: npm run build
+        
+      - name: Check performance budget
+        run: |
+          echo "🎯 Performance Budget Check"
+          echo "============================"
+          echo ""
+          
+          # Define performance budgets
+          CONTENT_SCRIPT_BUDGET=500000    # 500KB for content scripts
+          BACKGROUND_SCRIPT_BUDGET=200000 # 200KB for background script
+          POPUP_BUDGET=150000             # 150KB for popup
+          OPTIONS_BUDGET=200000           # 200KB for options page
+          
+          budget_passed=true
+          
+          # Check content script size
+          if [ -f "dist/main.js" ]; then
+            content_size=$(wc -c < dist/main.js)
+            echo "Content script size: $(numfmt --to=iec $content_size)"
+            
+            if [ "$content_size" -gt "$CONTENT_SCRIPT_BUDGET" ]; then
+              echo "❌ Content script exceeds budget: $(numfmt --to=iec $content_size) > $(numfmt --to=iec $CONTENT_SCRIPT_BUDGET)"
+              budget_passed=false
+            else
+              echo "✅ Content script within budget"
+            fi
+          fi
+          
+          # Check background script size
+          if [ -f "dist/service-worker.js" ]; then
+            bg_size=$(wc -c < dist/service-worker.js)
+            echo "Background script size: $(numfmt --to=iec $bg_size)"
+            
+            if [ "$bg_size" -gt "$BACKGROUND_SCRIPT_BUDGET" ]; then
+              echo "❌ Background script exceeds budget: $(numfmt --to=iec $bg_size) > $(numfmt --to=iec $BACKGROUND_SCRIPT_BUDGET)"
+              budget_passed=false
+            else
+              echo "✅ Background script within budget"
+            fi
+          fi
+          
+          # Check popup size
+          if [ -f "dist/popup.js" ]; then
+            popup_size=$(wc -c < dist/popup.js)
+            echo "Popup script size: $(numfmt --to=iec $popup_size)"
+            
+            if [ "$popup_size" -gt "$POPUP_BUDGET" ]; then
+              echo "❌ Popup script exceeds budget: $(numfmt --to=iec $popup_size) > $(numfmt --to=iec $POPUP_BUDGET)"
+              budget_passed=false
+            else
+              echo "✅ Popup script within budget"
+            fi
+          fi
+          
+          # Check options page size
+          if [ -f "dist/options.js" ]; then
+            options_size=$(wc -c < dist/options.js)
+            echo "Options script size: $(numfmt --to=iec $options_size)"
+            
+            if [ "$options_size" -gt "$OPTIONS_BUDGET" ]; then
+              echo "❌ Options script exceeds budget: $(numfmt --to=iec $options_size) > $(numfmt --to=iec $OPTIONS_BUDGET)"
+              budget_passed=false
+            else
+              echo "✅ Options script within budget"
+            fi
+          fi
+          
+          echo ""
+          if [ "$budget_passed" = true ]; then
+            echo "✅ All performance budgets passed!"
+          else
+            echo "❌ Performance budget check failed"
+            echo ""
+            echo "Consider the following optimizations:"
+            echo "• Code splitting for large modules"
+            echo "• Tree shaking to remove unused code"
+            echo "• Dynamic imports for non-critical features"
+            echo "• Bundle analysis to identify large dependencies"
+            exit 1
+          fi

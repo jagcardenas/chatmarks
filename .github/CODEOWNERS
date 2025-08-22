@@ -1,0 +1,42 @@
+# Global ownership
+* @jagcardenas
+
+# Core source code
+/src/ @jagcardenas
+
+# Extension manifest and configuration
+/manifest.json @jagcardenas
+/vite.config.ts @jagcardenas
+/tsconfig.json @jagcardenas
+
+# Test files - require review for test changes
+/tests/ @jagcardenas
+/jest.config.js @jagcardenas
+
+# CI/CD configuration - critical infrastructure
+/.github/ @jagcardenas
+/package.json @jagcardenas
+/package-lock.json @jagcardenas
+
+# Code quality configuration
+/eslint.config.js @jagcardenas
+/.prettierrc @jagcardenas
+/commitlint.config.js @jagcardenas
+
+# Documentation
+/README.md @jagcardenas
+/CLAUDE.md @jagcardenas
+/TASKS.md @jagcardenas
+
+# Security-sensitive files
+/src/background/ @jagcardenas
+/src/content/storage/ @jagcardenas
+
+# Platform adapters - require careful review
+/src/content/adapters/ @jagcardenas
+
+# Chrome extension specific files
+/src/popup/ @jagcardenas
+/src/options/ @jagcardenas
+/src/icons/ @jagcardenas
+/public/ @jagcardenas

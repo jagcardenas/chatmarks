@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/jagcardenas/chatmarks/discussions
+    about: Ask questions, share ideas, and discuss Chatmarks with the community
+  - name: 📚 Documentation
+    url: https://github.com/jagcardenas/chatmarks#readme
+    about: Read the project documentation and user guide
+  - name: 🔒 Security Issues
+    url: https://github.com/jagcardenas/chatmarks/security/advisories/new
+    about: Report security vulnerabilities privately
