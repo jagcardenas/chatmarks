@@ -30,9 +30,9 @@ async function initializePopup(): Promise<void> {
     // Set up event listeners
     setupEventListeners();
 
-    console.log('Chatmarks popup initialized');
+    // Initialization complete
   } catch (error) {
-    console.error('Failed to initialize popup:', error);
+    console.error('Chatmarks: Failed to initialize popup:', error);
     showErrorState('Failed to load bookmarks');
   }
 }
@@ -132,7 +132,7 @@ async function loadBookmarkSummary(): Promise<void> {
       }
     }
   } catch (error) {
-    console.error('Failed to load bookmark summary:', error);
+    console.error('Chatmarks: Failed to load bookmark summary:', error);
   }
 }
 
@@ -157,7 +157,7 @@ async function getCurrentConversationBookmarks(
       bookmark => bookmark.conversationId === conversationId
     );
   } catch (error) {
-    console.error('Failed to get current conversation bookmarks:', error);
+    console.error('Chatmarks: Failed to get current conversation bookmarks:', error);
     return [];
   }
 }
@@ -205,7 +205,7 @@ async function loadRecentBookmarks(): Promise<void> {
       displayRecentBookmarks(recentBookmarks);
     }
   } catch (error) {
-    console.error('Failed to load recent bookmarks:', error);
+    console.error('Chatmarks: Failed to load recent bookmarks:', error);
   }
 }
 
@@ -292,7 +292,7 @@ async function navigateToBookmark(bookmarkId: string): Promise<void> {
     // Close popup after navigation
     window.close();
   } catch (error) {
-    console.error('Failed to navigate to bookmark:', error);
+    console.error('Chatmarks: Failed to navigate to bookmark:', error);
   }
 }
 
@@ -327,7 +327,7 @@ async function handleShowSidebar(): Promise<void> {
 
     window.close();
   } catch (error) {
-    console.error('Failed to show sidebar:', error);
+    console.error('Chatmarks: Failed to show sidebar:', error);
   }
 }
 

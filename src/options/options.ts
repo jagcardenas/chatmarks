@@ -58,7 +58,7 @@ async function initializeOptionsPage(): Promise<void> {
     // Set up event listeners
     setupEventListeners();
 
-    console.log('Chatmarks options page initialized');
+    // Options page initialization complete
   } catch (error) {
     console.error('Failed to initialize options page:', error);
     showSaveStatus('Failed to load settings', 'error');
@@ -80,7 +80,7 @@ async function loadSettings(): Promise<void> {
     const accent = settings.accentColor || DEFAULT_SETTINGS.accentColor!;
     applyAccentTheme(accent);
 
-    console.log('Settings loaded:', settings);
+    // Settings loaded successfully
   } catch (error) {
     console.error('Failed to load settings:', error);
     // Fall back to default settings
@@ -219,7 +219,7 @@ function handleFormChange(): void {
     .checked;
   if (autoSave) {
     // Debounced auto-save (implemented in later task)
-    console.log('Auto-save triggered');
+    // Auto-save triggered
   }
 }
 
@@ -233,7 +233,7 @@ async function handleSaveSettings(): Promise<void> {
     await chrome.storage.local.set({ settings });
 
     showSaveStatus('Settings saved successfully', 'success');
-    console.log('Settings saved:', settings);
+    // Settings saved successfully
     if (settings.accentColor) {
       applyAccentTheme(settings.accentColor);
     }
@@ -337,7 +337,7 @@ async function handleResetDefaults(): Promise<void> {
       await chrome.storage.local.set({ settings: DEFAULT_SETTINGS });
 
       showSaveStatus('Settings reset to defaults', 'success');
-      console.log('Settings reset to defaults');
+      // Settings reset to defaults
       applyAccentTheme(DEFAULT_SETTINGS.accentColor!);
     } catch (error) {
       console.error('Failed to reset settings:', error);
