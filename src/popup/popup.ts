@@ -51,7 +51,7 @@ async function applyAccentFromSettings(): Promise<void> {
       const light = toRGBA(accent, 0.15);
       document.documentElement.style.setProperty('--cm-primary-100', light);
     }
-  } catch (e) {
+  } catch {
     // no-op fallback to defaults
   }
 }

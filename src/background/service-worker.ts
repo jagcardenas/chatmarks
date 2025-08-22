@@ -143,25 +143,32 @@ async function handleSaveSettings(
 }
 
 /**
- * Handle bookmark retrieval requests
+ * Handle bookmark retrieval requests using new StorageService
  */
 async function handleGetBookmarks(
   filters: Record<string, unknown>,
   sendResponse: (response: MessageResponse) => void
 ): Promise<void> {
   try {
-    const result = await chrome.storage.local.get('bookmarks');
-    const bookmarks = result.bookmarks || [];
+    // Import StorageService dynamically to avoid issues with module loading
+    const { StorageService } = await import(
+      '../content/storage/StorageService'
+    );
+    const storageService = new StorageService();
 
-    // Apply filters if provided
-    let filteredBookmarks = bookmarks;
-    if (filters?.conversationId) {
-      filteredBookmarks = bookmarks.filter(
-        (b: Bookmark) => b.conversationId === filters.conversationId
-      );
-    }
+    // Convert filters to proper BookmarkFilters type
+    const bookmarkFilters = {
+      conversationId: filters?.conversationId as string | undefined,
+      platform: filters?.platform as Platform | undefined,
+      tags: filters?.tags as string[] | undefined,
+      searchText: filters?.searchText as string | undefined,
+    };
 
-    sendResponse({ success: true, data: filteredBookmarks });
+    const bookmarks = await storageService.getBookmarks(bookmarkFilters);
+    sendResponse({
+      success: true,
+      data: bookmarks as unknown as Record<string, unknown>,
+    });
   } catch (error) {
     sendResponse({
       success: false,
@@ -171,13 +178,19 @@ async function handleGetBookmarks(
 }
 
 /**
- * Handle create bookmark requests (mocked persistence in chrome.storage.local)
+ * Handle create bookmark requests using new StorageService
  */
 async function handleCreateBookmark(
   data: Record<string, unknown>,
   sendResponse: (response: MessageResponse) => void
 ): Promise<void> {
   try {
+    // Import StorageService dynamically to avoid issues with module loading
+    const { StorageService } = await import(
+      '../content/storage/StorageService'
+    );
+    const storageService = new StorageService();
+
     const nowIso = new Date().toISOString();
     const id = (globalThis as any).crypto?.randomUUID
       ? crypto.randomUUID()
@@ -196,10 +209,7 @@ async function handleCreateBookmark(
       color: (data.color as string) || '#ffeb3b',
     };
 
-    const existing = await chrome.storage.local.get('bookmarks');
-    const bookmarks: Bookmark[] = existing.bookmarks || [];
-    bookmarks.push(newBookmark);
-    await chrome.storage.local.set({ bookmarks });
+    await storageService.saveBookmark(newBookmark);
 
     sendResponse({
       success: true,
