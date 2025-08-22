@@ -228,4 +228,18 @@ export class TextSelection {
       selection.addRange(range);
     }
   }
+
+  /**
+   * Cleanup method to clear timers and listeners
+   */
+  cleanup(): void {
+    // Clear any pending debounce timer
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+
+    // Clear all selection listeners (they should be cleaned up by their cleanup functions)
+    this.selectionListeners.clear();
+  }
 }

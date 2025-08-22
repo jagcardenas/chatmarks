@@ -18,9 +18,48 @@ let floatingButtonEl: HTMLButtonElement | null = null;
 let dialogContainerEl: HTMLDivElement | null = null;
 let dialogOverlayEl: HTMLDivElement | null = null;
 
+// Event listener cleanup tracking
+let eventListeners: Array<{ target: EventTarget; type: string; listener: EventListener }> = [];
+
 // Theme cache
 let appliedAccent: string | null = null;
 let appliedHighlight: string | null = null;
+
+/**
+ * Helper function to add event listener with tracking for cleanup
+ */
+function addTrackedEventListener(
+  target: EventTarget,
+  type: string,
+  listener: EventListener,
+  options?: AddEventListenerOptions
+): void {
+  target.addEventListener(type, listener, options);
+  eventListeners.push({ target, type, listener });
+}
+
+/**
+ * Type-safe helper for specific event types
+ */
+function addTrackedTypedEventListener<T extends Event>(
+  target: EventTarget,
+  type: string,
+  listener: (event: T) => void,
+  options?: AddEventListenerOptions
+): void {
+  const genericListener = listener as EventListener;
+  addTrackedEventListener(target, type, genericListener, options);
+}
+
+/**
+ * Remove all tracked event listeners
+ */
+function removeTrackedEventListeners(): void {
+  eventListeners.forEach(({ target, type, listener }) => {
+    target.removeEventListener(type, listener);
+  });
+  eventListeners = [];
+}
 
 /**
  * Creates a basic anchor for selections without full anchor data
@@ -176,8 +215,8 @@ function detectCurrentPlatform(): Platform | null {
  * Set up event listeners for text selection
  */
 function setupSelectionListeners(): void {
-  document.addEventListener('selectionchange', handleSelectionChange);
-  document.addEventListener('mouseup', handleMouseUp);
+  addTrackedTypedEventListener(document, 'selectionchange', handleSelectionChange);
+  addTrackedTypedEventListener(document, 'mouseup', handleMouseUp);
 }
 
 /**
@@ -272,7 +311,7 @@ function hideBookmarkCreationUI(): void {
  * Set up keyboard shortcuts for bookmark operations
  */
 function setupKeyboardShortcuts(): void {
-  document.addEventListener('keydown', handleKeyboardShortcut);
+  addTrackedTypedEventListener(document, 'keydown', handleKeyboardShortcut);
 }
 
 /**
@@ -556,8 +595,35 @@ function generateMessageId(): string {
 
 // Cleanup function for when content script is unloaded
 async function cleanupContentScript(): Promise<void> {
+  // Remove all tracked event listeners to prevent memory leaks
+  removeTrackedEventListeners();
+
+  // Clean up text selection manager
+  if (textSelection) {
+    textSelection.cleanup();
+  }
+
   // Flush any pending storage operations
   // Note: StorageService cleanup would be handled by individual service instances
+
+  // Clean up DOM elements
+  if (floatingButtonEl && floatingButtonEl.parentNode) {
+    floatingButtonEl.parentNode.removeChild(floatingButtonEl);
+  }
+  if (dialogContainerEl && dialogContainerEl.parentNode) {
+    dialogContainerEl.parentNode.removeChild(dialogContainerEl);
+  }
+  if (dialogOverlayEl && dialogOverlayEl.parentNode) {
+    dialogOverlayEl.parentNode.removeChild(dialogOverlayEl);
+  }
+
+  // Clear global references
+  textSelection = null as any;
+  currentPlatform = null;
+  currentSelection = null;
+  floatingButtonEl = null;
+  dialogContainerEl = null;
+  dialogOverlayEl = null;
 }
 
 // Initialize the content script when the page loads
