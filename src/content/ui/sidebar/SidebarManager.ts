@@ -133,7 +133,7 @@ export class SidebarManager {
     const sidebarCallbacks: BookmarkSidebarCallbacks = {
       onBookmarkClick: this.handleBookmarkClick.bind(this),
       onBookmarkEdit: this.handleBookmarkEdit.bind(this),
-      onBookmarkDelete: this.handleBookmarkDelete.bind(this),
+      onBookmarkDelete: (bookmark: Bookmark) => this.handleBookmarkDelete(bookmark),
       onSearchChange: this.handleSearchChange.bind(this),
       onFilterChange: this.handleFilterChange.bind(this),
     };
@@ -478,7 +478,7 @@ export class SidebarManager {
     
     // Update sort options if they're included in filters
     if (filters.sortBy) {
-      this.state.sortOptions.criteria = filters.sortBy;
+      this.state.sortOptions.criteria = filters.sortBy as any;
     }
     if (filters.sortDirection) {
       this.state.sortOptions.direction = filters.sortDirection;
