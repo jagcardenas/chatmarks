@@ -1,0 +1,71 @@
+version: 2
+
+updates:
+  # Enable version updates for npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "jagcardenas"
+    assignees:
+      - "jagcardenas"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    # Group related dependency updates
+    groups:
+      typescript-ecosystem:
+        patterns:
+          - "typescript*"
+          - "@types/*"
+          - "ts-*"
+      testing-framework:
+        patterns:
+          - "jest*"
+          - "@jest/*"
+          - "test*"
+      build-tools:
+        patterns:
+          - "vite*"
+          - "@crxjs/*"
+          - "rollup*"
+      linting-tools:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "prettier*"
+          - "@typescript-eslint/*"
+      git-hooks:
+        patterns:
+          - "husky*"
+          - "lint-staged*"
+          - "@commitlint/*"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "jagcardenas"
+    assignees:
+      - "jagcardenas"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "automated"

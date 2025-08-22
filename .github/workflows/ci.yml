@@ -1,0 +1,242 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, development ]
+  pull_request:
+    branches: [ main, development ]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run TypeScript compilation check
+        run: npm run typecheck
+        
+      - name: Run ESLint
+        run: npm run lint
+        
+      - name: Check code formatting
+        run: npm run format:check
+        
+      - name: Run test suite
+        run: npm run test:coverage
+        
+      - name: Upload coverage reports to Codecov
+        if: matrix.node-version == 20
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
+  build:
+    name: Build Extension
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build extension for production
+        run: npm run build
+        
+      - name: Validate extension manifest
+        run: |
+          if [ ! -f "dist/manifest.json" ]; then
+            echo "Error: manifest.json not found in dist/"
+            exit 1
+          fi
+          echo "✅ Extension manifest validated"
+          
+      - name: Check extension file structure
+        run: |
+          echo "📁 Extension build contents:"
+          ls -la dist/
+          
+          # Verify required files exist
+          required_files=("manifest.json" "popup.js" "options.js" "service-worker.js")
+          for file in "${required_files[@]}"; do
+            if [ ! -f "dist/$file" ]; then
+              echo "❌ Required file missing: $file"
+              exit 1
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+          
+      - name: Calculate bundle size
+        run: |
+          echo "📊 Bundle size analysis:"
+          du -sh dist/
+          find dist/ -name "*.js" -exec wc -c {} + | sort -n
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-build-node-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        
+      - name: Check for security vulnerabilities in dependencies
+        run: |
+          npm audit --json > audit-results.json || true
+          if [ -s audit-results.json ]; then
+            echo "⚠️  Security audit results:"
+            cat audit-results.json | jq '.vulnerabilities | length'
+          else
+            echo "✅ No security vulnerabilities found"
+          fi
+
+  extension-validation:
+    name: Chrome Extension Validation
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build extension
+        run: npm run build
+        
+      - name: Install Chrome extension validation tools
+        run: npm install -g web-ext
+        
+      - name: Validate extension
+        run: |
+          echo "🔍 Validating Chrome extension..."
+          # Basic manifest validation
+          node -e "
+            const manifest = require('./dist/manifest.json');
+            const requiredFields = ['manifest_version', 'name', 'version', 'description'];
+            const missing = requiredFields.filter(field => !manifest[field]);
+            if (missing.length > 0) {
+              console.error('❌ Missing required manifest fields:', missing);
+              process.exit(1);
+            }
+            if (manifest.manifest_version !== 3) {
+              console.error('❌ Must use Manifest V3');
+              process.exit(1);
+            }
+            console.log('✅ Manifest validation passed');
+          "
+          
+      - name: Check extension permissions
+        run: |
+          echo "🔐 Checking extension permissions..."
+          node -e "
+            const manifest = require('./dist/manifest.json');
+            const allowedPermissions = ['storage', 'activeTab', 'scripting', 'contextMenus'];
+            const permissions = manifest.permissions || [];
+            const invalidPermissions = permissions.filter(p => !allowedPermissions.includes(p));
+            if (invalidPermissions.length > 0) {
+              console.error('❌ Invalid permissions detected:', invalidPermissions);
+              process.exit(1);
+            }
+            console.log('✅ Extension permissions validated');
+          "
+
+  performance:
+    name: Performance Check
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-build-node-${{ github.sha }}
+          path: dist/
+          
+      - name: Check bundle size limits
+        run: |
+          echo "📏 Checking bundle size limits..."
+          
+          # Define size limits (in bytes)
+          MAX_TOTAL_SIZE=5242880  # 5MB
+          MAX_JS_FILE_SIZE=1048576  # 1MB per JS file
+          
+          # Check total bundle size
+          total_size=$(du -sb dist/ | cut -f1)
+          echo "Total bundle size: $(($total_size / 1024))KB"
+          
+          if [ $total_size -gt $MAX_TOTAL_SIZE ]; then
+            echo "❌ Bundle size exceeds limit: $(($total_size / 1024))KB > $(($MAX_TOTAL_SIZE / 1024))KB"
+            exit 1
+          fi
+          
+          # Check individual JS file sizes
+          find dist/ -name "*.js" | while read file; do
+            size=$(wc -c < "$file")
+            filename=$(basename "$file")
+            echo "$filename: $(($size / 1024))KB"
+            
+            if [ $size -gt $MAX_JS_FILE_SIZE ]; then
+              echo "❌ File $filename exceeds size limit: $(($size / 1024))KB > $(($MAX_JS_FILE_SIZE / 1024))KB"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All files within size limits"

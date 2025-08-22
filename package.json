@@ -18,7 +18,21 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
-    "precommit": "npm run typecheck && npm run lint && npm run test"
+    "precommit": "npm run typecheck && npm run lint && npm run test",
+    "pack": "npm run build && cd dist && zip -r ../chatmarks-extension.zip .",
+    "pack:dev": "npm run build:dev && cd dist && zip -r ../chatmarks-extension-dev.zip .",
+    "validate": "node scripts/validate-extension.js",
+    "security-audit": "npm audit --audit-level=moderate && node scripts/security-scan.js",
+    "size-check": "npm run build && node scripts/size-check.js && size-limit",
+    "version:patch": "npm version patch --no-git-tag-version && node scripts/update-manifest-version.js",
+    "version:minor": "npm version minor --no-git-tag-version && node scripts/update-manifest-version.js",
+    "version:major": "npm version major --no-git-tag-version && node scripts/update-manifest-version.js",
+    "webstore:upload": "node scripts/webstore-upload.js",
+    "webstore:publish": "node scripts/webstore-publish.js",
+    "release:prepare": "npm run validate && npm run security-audit && npm run size-check",
+    "release:patch": "npm run version:patch && npm run release:prepare && npm run pack",
+    "release:minor": "npm run version:minor && npm run release:prepare && npm run pack",
+    "release:major": "npm run version:major && npm run release:prepare && npm run pack"
   },
   "repository": {
     "type": "git",
@@ -45,6 +59,7 @@
     "@commitlint/config-conventional": "^19.8.1",
     "@crxjs/vite-plugin": "^2.2.0",
     "@eslint/js": "^9.33.0",
+    "@size-limit/preset-app": "^11.0.1",
     "@types/chrome": "^0.1.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
@@ -57,8 +72,36 @@
     "jest-environment-jsdom": "^30.0.5",
     "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
+    "size-limit": "^11.0.1",
     "ts-jest": "^29.4.1",
     "typescript": "^5.9.2",
     "vite": "^7.1.3"
-  }
+  },
+  "size-limit": [
+    {
+      "name": "Content Script",
+      "path": "dist/main.js",
+      "limit": "500 KB"
+    },
+    {
+      "name": "Background Script",
+      "path": "dist/service-worker.js",
+      "limit": "200 KB"
+    },
+    {
+      "name": "Popup Script",
+      "path": "dist/popup.js",
+      "limit": "150 KB"
+    },
+    {
+      "name": "Options Script",
+      "path": "dist/options.js",
+      "limit": "200 KB"
+    },
+    {
+      "name": "Total Bundle",
+      "path": "dist/**/*.js",
+      "limit": "5 MB"
+    }
+  ]
 }
