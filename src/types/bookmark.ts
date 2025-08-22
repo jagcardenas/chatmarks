@@ -212,3 +212,124 @@ export interface MessageElement {
   /** Timestamp when the message was created (if available) */
   timestamp?: Date;
 }
+
+// Navigation System Types
+
+/**
+ * Navigation direction for bookmark traversal
+ */
+export type NavigationDirection = 'next' | 'previous';
+
+/**
+ * Scroll behavior options for smooth scrolling
+ */
+export interface ScrollOptions {
+  /** Scrolling behavior type */
+  behavior?: ScrollBehavior;
+  
+  /** Block alignment for scrolling */
+  block?: ScrollLogicalPosition;
+  
+  /** Inline alignment for scrolling */
+  inline?: ScrollLogicalPosition;
+}
+
+/**
+ * Navigation result information
+ */
+export interface NavigationResult {
+  /** Whether the navigation was successful */
+  success: boolean;
+  
+  /** The bookmark that was navigated to */
+  bookmark?: Bookmark;
+  
+  /** Error message if navigation failed */
+  error?: string;
+  
+  /** Time taken for the navigation in milliseconds */
+  duration?: number;
+  
+  /** Whether this navigation crossed conversation boundaries */
+  crossConversation?: boolean;
+}
+
+/**
+ * Bookmark position information for navigation
+ */
+export interface BookmarkPosition {
+  /** The bookmark */
+  bookmark: Bookmark;
+  
+  /** Index in the ordered bookmark list */
+  index: number;
+  
+  /** DOM element where the bookmark is anchored */
+  element?: Element;
+  
+  /** Whether the element is currently visible in viewport */
+  isVisible?: boolean;
+  
+  /** Distance from current viewport (for performance optimization) */
+  distanceFromViewport?: number;
+}
+
+/**
+ * Navigation state information
+ */
+export interface NavigationState {
+  /** Currently active conversation ID */
+  currentConversationId: string;
+  
+  /** Ordered list of bookmarks for navigation */
+  bookmarks: Bookmark[];
+  
+  /** Index of currently active bookmark (-1 if none) */
+  currentIndex: number;
+  
+  /** Whether navigation is currently in progress */
+  isNavigating: boolean;
+  
+  /** Last navigation timestamp */
+  lastNavigationTime?: number;
+}
+
+/**
+ * URL state change event data
+ */
+export interface URLChangeEvent {
+  /** The bookmark ID from the URL hash */
+  bookmarkId: string | null;
+  
+  /** The full URL */
+  url: string;
+  
+  /** The hash fragment */
+  hash: string;
+  
+  /** Whether this was a programmatic change */
+  programmatic?: boolean;
+}
+
+/**
+ * Configuration options for the navigation system
+ */
+export interface NavigationConfig {
+  /** Enable/disable smooth scrolling animations */
+  enableSmoothScrolling?: boolean;
+  
+  /** Duration of highlight animations in milliseconds */
+  highlightDuration?: number;
+  
+  /** Enable/disable URL state management */
+  enableURLState?: boolean;
+  
+  /** Enable/disable cross-conversation navigation */
+  enableCrossConversation?: boolean;
+  
+  /** Scroll offset from top when centering elements */
+  scrollOffset?: number;
+  
+  /** Debounce delay for rapid navigation calls */
+  navigationDebounce?: number;
+}

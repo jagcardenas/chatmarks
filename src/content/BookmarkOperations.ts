@@ -11,6 +11,7 @@ import {
   SelectionRange,
   TextAnchor,
   Bookmark,
+  NavigationResult,
 } from '../types/bookmark';
 import { MessageType, ExtensionMessage } from '../types/messages';
 import { AnchorSystem } from './anchoring/AnchorSystem';
@@ -26,6 +27,9 @@ export class BookmarkOperations {
   private highlightRenderer: HighlightRenderer;
   private platformAdapter: ChatGPTAdapter | null;
   private currentPlatform: Platform;
+  
+  // Navigation controller will be set by ContentScriptInitializer
+  private navigationController: any = null;
 
   constructor(
     anchorSystem: AnchorSystem,
@@ -303,12 +307,64 @@ export class BookmarkOperations {
   }
 
   /**
-   * Navigates to a specific bookmark.
+   * Sets the navigation controller for enhanced navigation features.
+   *
+   * @param navigationController - The navigation controller instance
+   */
+  setNavigationController(navigationController: any): void {
+    this.navigationController = navigationController;
+  }
+
+  /**
+   * Navigates to a specific bookmark using the enhanced navigation system.
+   *
+   * @param bookmarkId - The ID of the bookmark to navigate to
+   * @returns Navigation result with success status and timing
+   */
+  async navigateToBookmark(bookmarkId: string): Promise<NavigationResult> {
+    const startTime = performance.now();
+    
+    try {
+      // Use NavigationController if available for enhanced navigation
+      if (this.navigationController) {
+        const success = await this.navigationController.navigateToBookmark(bookmarkId);
+        const duration = performance.now() - startTime;
+        
+        return {
+          success,
+          duration,
+          error: success ? undefined : 'Navigation controller failed to navigate',
+        };
+      }
+
+      // Fallback to legacy navigation
+      const success = await this.legacyNavigateToBookmark(bookmarkId);
+      const duration = performance.now() - startTime;
+      
+      return {
+        success,
+        duration,
+        error: success ? undefined : 'Legacy navigation failed',
+      };
+    } catch (error) {
+      const duration = performance.now() - startTime;
+      console.error('Chatmarks: Error navigating to bookmark', error);
+      
+      return {
+        success: false,
+        duration,
+        error: error instanceof Error ? error.message : 'Unknown navigation error',
+      };
+    }
+  }
+
+  /**
+   * Legacy navigation method (kept for backward compatibility).
    *
    * @param bookmarkId - The ID of the bookmark to navigate to
    * @returns true if successful, false otherwise
    */
-  async navigateToBookmark(bookmarkId: string): Promise<boolean> {
+  private async legacyNavigateToBookmark(bookmarkId: string): Promise<boolean> {
     try {
       const bookmarks = await this.getBookmarksForConversation();
       const bookmark = bookmarks.find(b => b.id === bookmarkId);
@@ -336,8 +392,11 @@ export class BookmarkOperations {
           });
         }
 
-        // Flash the highlight (method not yet implemented)
-        // await this.highlightRenderer.flashHighlight(bookmarkId);
+        // Flash the highlight using HighlightRenderer
+        const bookmark = bookmarks.find(b => b.id === bookmarkId);
+        if (bookmark) {
+          await this.highlightRenderer.renderHighlight(bookmark, undefined, true);
+        }
 
         return true;
       }
@@ -345,9 +404,102 @@ export class BookmarkOperations {
       console.warn('Chatmarks: Could not restore bookmark position');
       return false;
     } catch (error) {
-      console.error('Chatmarks: Error navigating to bookmark', error);
+      console.error('Chatmarks: Error in legacy navigation', error);
       return false;
     }
+  }
+
+  /**
+   * Navigates to the next bookmark in the conversation.
+   *
+   * @returns Navigation result with success status
+   */
+  async navigateToNextBookmark(): Promise<NavigationResult> {
+    const startTime = performance.now();
+    
+    if (this.navigationController) {
+      try {
+        const success = await this.navigationController.navigateNext();
+        const duration = performance.now() - startTime;
+        
+        return {
+          success,
+          duration,
+          error: success ? undefined : 'No next bookmark available',
+        };
+      } catch (error) {
+        const duration = performance.now() - startTime;
+        return {
+          success: false,
+          duration,
+          error: error instanceof Error ? error.message : 'Next navigation failed',
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      duration: performance.now() - startTime,
+      error: 'Navigation controller not available',
+    };
+  }
+
+  /**
+   * Navigates to the previous bookmark in the conversation.
+   *
+   * @returns Navigation result with success status
+   */
+  async navigateToPreviousBookmark(): Promise<NavigationResult> {
+    const startTime = performance.now();
+    
+    if (this.navigationController) {
+      try {
+        const success = await this.navigationController.navigatePrevious();
+        const duration = performance.now() - startTime;
+        
+        return {
+          success,
+          duration,
+          error: success ? undefined : 'No previous bookmark available',
+        };
+      } catch (error) {
+        const duration = performance.now() - startTime;
+        return {
+          success: false,
+          duration,
+          error: error instanceof Error ? error.message : 'Previous navigation failed',
+        };
+      }
+    }
+    
+    return {
+      success: false,
+      duration: performance.now() - startTime,
+      error: 'Navigation controller not available',
+    };
+  }
+
+  /**
+   * Gets the current navigation state.
+   *
+   * @returns Current navigation information
+   */
+  getNavigationState(): {
+    hasNavigationController: boolean;
+    currentIndex?: number;
+    totalBookmarks?: number;
+  } {
+    if (this.navigationController) {
+      return {
+        hasNavigationController: true,
+        currentIndex: this.navigationController.getCurrentBookmarkIndex(),
+        totalBookmarks: this.navigationController.getCurrentBookmarks().length,
+      };
+    }
+    
+    return {
+      hasNavigationController: false,
+    };
   }
 
   /**
