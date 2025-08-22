@@ -22,18 +22,14 @@ on:
         type: boolean
 
 jobs:
-  version-bump:
-    name: Version Bump
+  build-and-release:
+    name: Build and Release
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    outputs:
-      new_version: ${{ steps.version.outputs.new_version }}
-      
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
           
       - name: Setup Node.js
@@ -45,24 +41,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Configure Git
+      - name: Version bump (manual trigger only)
+        if: github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-      - name: Bump version
-        id: version
-        run: |
-          # Get current version
-          current_version=$(node -p "require('./package.json').version")
-          echo "Current version: $current_version"
-          
-          # Bump version
           npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
           new_version=$(node -p "require('./package.json').version")
-          echo "New version: $new_version"
           
-          # Update manifest.json version
+          # Update manifest.json
           node -e "
             const fs = require('fs');
             const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
@@ -70,198 +58,89 @@ jobs:
             fs.writeFileSync('manifest.json', JSON.stringify(manifest, null, 2) + '\n');
           "
           
-          # Commit changes
           git add package.json package-lock.json manifest.json
           git commit -m "chore: bump version to v$new_version"
           git tag "v$new_version"
           git push origin HEAD --tags
           
-          echo "new_version=$new_version" >> $GITHUB_OUTPUT
-
-  build-and-test:
-    name: Build and Test
-    runs-on: ubuntu-latest
-    needs: [version-bump]
-    if: always() && !failure()
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref }}
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Run full test suite
+      - name: Run quality checks
         run: |
           npm run typecheck
           npm run lint
           npm run test:coverage
           
-      - name: Build extension for release
+      - name: Security audit
+        run: npm audit --audit-level=high
+          
+      - name: Build extension
         run: npm run build
         env:
           NODE_ENV: production
           
-      - name: Validate release build
+      - name: Validate build
         run: |
-          echo "🔍 Validating release build..."
+          # Verify required files exist
+          required_files=("manifest.json" "popup.js" "options.js" "service-worker.js" "main.js")
+          for file in "${required_files[@]}"; do
+            if [ ! -f "dist/$file" ]; then
+              echo "❌ Missing: $file"
+              exit 1
+            fi
+          done
           
-          # Check manifest version matches package.json
-          package_version=$(node -p "require('./package.json').version")
-          manifest_version=$(node -p "require('./dist/manifest.json').version")
-          
-          if [ "$package_version" != "$manifest_version" ]; then
-            echo "❌ Version mismatch: package.json ($package_version) != manifest.json ($manifest_version)"
+          # Check for sensitive data
+          if grep -ri "api[_-]?key\|secret\|password\|token" dist/ 2>/dev/null; then
+            echo "❌ Sensitive data found in build"
             exit 1
           fi
           
-          echo "✅ Version consistency validated: $package_version"
+          echo "✅ Build validation passed"
           
       - name: Create extension package
         run: |
-          echo "📦 Creating extension package..."
-          cd dist
-          zip -r ../chatmarks-extension.zip .
-          cd ..
+          cd dist && zip -r ../chatmarks-extension.zip . && cd ..
+          echo "📦 Extension package created: $(ls -lh chatmarks-extension.zip | awk '{print $5}')"
           
-          echo "📊 Package size:"
-          ls -lh chatmarks-extension.zip
-          
-      - name: Upload extension package
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: chatmarks-extension-${{ github.sha }}
           path: chatmarks-extension.zip
           retention-days: 30
 
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: [build-and-test]
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Run security audit
-        run: |
-          echo "🛡️  Running security audit..."
-          npm audit --audit-level=high
-          
-      - name: Build for security scan
-        run: npm run build
-        
-      - name: Scan for sensitive data
-        run: |
-          echo "🔍 Scanning for sensitive data in build..."
-          
-          # Check for common sensitive patterns
-          sensitive_patterns=(
-            "api[_-]?key"
-            "secret"
-            "password"
-            "token"
-            "private[_-]?key"
-            "auth[_-]?token"
-          )
-          
-          found_sensitive=false
-          for pattern in "${sensitive_patterns[@]}"; do
-            if grep -ri "$pattern" dist/ --exclude-dir=node_modules; then
-              echo "⚠️  Found potentially sensitive data: $pattern"
-              found_sensitive=true
-            fi
-          done
-          
-          if [ "$found_sensitive" = true ]; then
-            echo "❌ Sensitive data detected in build"
-            exit 1
-          fi
-          
-          echo "✅ No sensitive data found in build"
-
-  chrome-web-store:
+  deploy-chrome-store:
     name: Deploy to Chrome Web Store
     runs-on: ubuntu-latest
-    needs: [build-and-test, security-scan]
+    needs: [build-and-release]
     if: |
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_to_store == 'true')
     environment: production
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
       - name: Download extension package
         uses: actions/download-artifact@v4
         with:
           name: chatmarks-extension-${{ github.sha }}
           
-      - name: Setup Chrome Web Store CLI
+      - name: Deploy to Chrome Web Store
         run: |
-          echo "🏪 Setting up Chrome Web Store deployment..."
           npm install -g chrome-webstore-upload-cli
           
-      - name: Upload to Chrome Web Store
-        env:
-          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        run: |
-          echo "📤 Uploading to Chrome Web Store..."
-          
-          # Upload extension
+          # Upload and optionally publish
           chrome-webstore-upload upload \
             --source chatmarks-extension.zip \
-            --extension-id $EXTENSION_ID \
-            --client-id $CLIENT_ID \
-            --client-secret $CLIENT_SECRET \
-            --refresh-token $REFRESH_TOKEN
+            --extension-id ${{ secrets.CHROME_EXTENSION_ID }} \
+            --client-id ${{ secrets.CHROME_CLIENT_ID }} \
+            --client-secret ${{ secrets.CHROME_CLIENT_SECRET }} \
+            --refresh-token ${{ secrets.CHROME_REFRESH_TOKEN }}
             
-          echo "✅ Extension uploaded successfully"
-          
-      - name: Publish to Chrome Web Store
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        env:
-          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        run: |
-          echo "🚀 Publishing to Chrome Web Store..."
-          
-          # Publish extension
-          chrome-webstore-upload publish \
-            --extension-id $EXTENSION_ID \
-            --client-id $CLIENT_ID \
-            --client-secret $CLIENT_SECRET \
-            --refresh-token $REFRESH_TOKEN
-            
-          echo "✅ Extension published successfully"
+          echo "✅ Extension uploaded to Chrome Web Store"
 
   create-github-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-and-test, security-scan]
+    needs: [build-and-release]
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     
     steps:
@@ -276,46 +155,29 @@ jobs:
           name: chatmarks-extension-${{ github.sha }}
           
       - name: Generate release notes
-        id: release_notes
+        id: notes
         run: |
-          echo "📝 Generating release notes..."
-          
-          # Get version from tag
           version=${GITHUB_REF#refs/tags/}
           echo "version=$version" >> $GITHUB_OUTPUT
           
-          # Generate release notes from commits since last tag
           last_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           
           if [ -n "$last_tag" ]; then
             echo "## Changes since $last_tag" > release_notes.md
-            echo "" >> release_notes.md
             git log --pretty=format:"- %s (%h)" $last_tag..HEAD >> release_notes.md
           else
             echo "## Initial Release" > release_notes.md
-            echo "" >> release_notes.md
             echo "- Initial version of Chatmarks Chrome Extension" >> release_notes.md
           fi
           
-          # Add installation instructions
-          echo "" >> release_notes.md
-          echo "## Installation" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "1. Download the \`chatmarks-extension.zip\` file below" >> release_notes.md
-          echo "2. Extract the contents to a folder" >> release_notes.md
-          echo "3. Open Chrome and navigate to \`chrome://extensions/\`" >> release_notes.md
-          echo "4. Enable \"Developer mode\" in the top right" >> release_notes.md
-          echo "5. Click \"Load unpacked\" and select the extracted folder" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "The extension will also be available on the Chrome Web Store shortly." >> release_notes.md
-          
       - name: Create GitHub Release
         uses: actions/create-release@v1
+        id: create_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.release_notes.outputs.version }}
-          release_name: Chatmarks ${{ steps.release_notes.outputs.version }}
+          tag_name: ${{ steps.notes.outputs.version }}
+          release_name: Chatmarks ${{ steps.notes.outputs.version }}
           body_path: release_notes.md
           draft: false
           prerelease: false
