@@ -6,12 +6,14 @@
  */
 
 import './styles.css';
-import { Platform, SelectionRange, TextAnchor } from '../types/bookmark';
+import { Platform, SelectionRange, TextAnchor, Bookmark } from '../types/bookmark';
 import { MessageType, ExtensionMessage } from '../types/messages';
 import { TextSelection } from './selection/TextSelection';
+import { HighlightRenderer } from './ui/highlights/HighlightRenderer';
 
-// Global instance for text selection management
+// Global instances for content script management
 let textSelection: TextSelection;
+let highlightRenderer: HighlightRenderer;
 let currentPlatform: Platform | null = null;
 let currentSelection: SelectionRange | null = null;
 let floatingButtonEl: HTMLButtonElement | null = null;
@@ -258,6 +260,9 @@ async function initializeContentScript(): Promise<void> {
     // Initialize text selection manager
     textSelection = new TextSelection();
 
+    // Initialize highlight renderer
+    highlightRenderer = new HighlightRenderer(document);
+
     // Set up selection event listeners
     setupSelectionListeners();
 
@@ -266,6 +271,9 @@ async function initializeContentScript(): Promise<void> {
 
     // Apply theme from settings
     await applyThemeFromSettings();
+
+    // Restore existing highlights
+    await restoreExistingHighlights();
 
     // Initialize platform-specific adapter (will be implemented in later tasks)
     // const adapter = await createPlatformAdapter(currentPlatform);
@@ -558,7 +566,27 @@ async function saveBookmark(note: string): Promise<void> {
       type: MessageType.CREATE_BOOKMARK,
       data: payload,
     } as ExtensionMessage);
-    if (!response?.success) {
+
+    if (response?.success && response.data) {
+      // Create bookmark object from response and render highlight immediately
+      const createdBookmark: Bookmark = {
+        id: response.data.id,
+        platform: currentPlatform,
+        conversationId,
+        messageId,
+        anchor: payload.anchor,
+        note,
+        tags: response.data.tags || [],
+        created: response.data.created || new Date().toISOString(),
+        updated: response.data.updated || new Date().toISOString(),
+        color: response.data.color || '#ffeb3b',
+      };
+
+      // Render highlight with flash animation
+      if (highlightRenderer) {
+        await highlightRenderer.renderHighlight(createdBookmark, undefined, true);
+      }
+    } else {
       console.warn('Chatmarks: Failed to save bookmark', response?.error);
     }
   } catch (error) {
@@ -650,6 +678,64 @@ function generateMessageId(): string {
   return `msg-${Date.now()}`;
 }
 
+/**
+ * Restores existing highlights for the current conversation
+ */
+async function restoreExistingHighlights(): Promise<void> {
+  if (!currentPlatform || !highlightRenderer) return;
+
+  try {
+    const conversationId = extractConversationId();
+
+    // Fetch bookmarks for current conversation from background script
+    const response = await chrome.runtime.sendMessage({
+      type: MessageType.GET_BOOKMARKS,
+      data: {
+        conversationId,
+        platform: currentPlatform,
+      },
+    } as ExtensionMessage);
+
+    if (response?.success && response.data && Array.isArray(response.data)) {
+      const bookmarks: Bookmark[] = response.data;
+
+      if (bookmarks.length > 0) {
+        console.debug(`Chatmarks: Restoring ${bookmarks.length} highlights for conversation ${conversationId}`);
+
+        // Use requestIdleCallback for non-blocking restoration
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(async () => {
+            try {
+              const restoreResult = await highlightRenderer.restoreHighlights(bookmarks);
+              console.debug('Chatmarks: Highlight restoration completed:', restoreResult);
+
+              if (restoreResult.failedToRestore > 0) {
+                console.warn('Chatmarks: Some highlights failed to restore:', restoreResult.errors);
+              }
+            } catch (error) {
+              console.warn('Chatmarks: Error during highlight restoration:', error);
+            }
+          });
+        } else {
+          // Fallback for browsers without requestIdleCallback
+          setTimeout(async () => {
+            try {
+              const restoreResult = await highlightRenderer.restoreHighlights(bookmarks);
+              console.debug('Chatmarks: Highlight restoration completed:', restoreResult);
+            } catch (error) {
+              console.warn('Chatmarks: Error during highlight restoration:', error);
+            }
+          }, 100);
+        }
+      }
+    } else {
+      console.debug('Chatmarks: No bookmarks found for current conversation');
+    }
+  } catch (error) {
+    console.warn('Chatmarks: Failed to restore existing highlights:', error);
+  }
+}
+
 // Cleanup function for when content script is unloaded
 async function cleanupContentScript(): Promise<void> {
   // Remove all tracked event listeners to prevent memory leaks
@@ -658,6 +744,11 @@ async function cleanupContentScript(): Promise<void> {
   // Clean up text selection manager
   if (textSelection) {
     textSelection.cleanup();
+  }
+
+  // Clean up highlight renderer
+  if (highlightRenderer) {
+    highlightRenderer.cleanup();
   }
 
   // Flush any pending storage operations
@@ -676,6 +767,7 @@ async function cleanupContentScript(): Promise<void> {
 
   // Clear global references
   textSelection = null as any;
+  highlightRenderer = null as any;
   currentPlatform = null;
   currentSelection = null;
   floatingButtonEl = null;
