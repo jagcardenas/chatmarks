@@ -135,7 +135,8 @@ export class KeyboardManager {
 
     const shortcutString = this.eventToShortcutString(event);
     const shortcutIds = this.shortcutKeys.get(shortcutString) || [];
-    const shortcut = shortcutIds.length > 0 ? this.shortcuts.get(shortcutIds[0]!) : undefined;
+    const shortcut =
+      shortcutIds.length > 0 ? this.shortcuts.get(shortcutIds[0]!) : undefined;
 
     if (shortcut) {
       event.preventDefault();
@@ -143,7 +144,10 @@ export class KeyboardManager {
       try {
         shortcut.action();
       } catch (error) {
-        console.error(`Error executing keyboard shortcut ${shortcutString}:`, error);
+        console.error(
+          `Error executing keyboard shortcut ${shortcutString}:`,
+          error
+        );
       }
     }
   }
@@ -196,9 +200,18 @@ export class KeyboardManager {
    * Parse a shortcut string into its components
    */
   parseShortcut(shortcutString: string): ParsedShortcut {
-    const parts = shortcutString.split('+').map(p => p.trim());
-    const modifiers = parts.slice(0, -1);
-    const key = parts[parts.length - 1];
+    // Handle spaces carefully - don't trim the key part if it's a space
+    const parts = shortcutString.split('+');
+    const trimmedParts = parts.map((p, index) => {
+      // Don't trim the last part if it's just a space (for space key)
+      if (index === parts.length - 1 && p.trim() === '') {
+        return ' ';
+      }
+      return p.trim();
+    });
+
+    const modifiers = trimmedParts.slice(0, -1);
+    const key = trimmedParts[trimmedParts.length - 1];
 
     return {
       key: this.normalizeKey(key || ''),
@@ -228,56 +241,61 @@ export class KeyboardManager {
       return '';
     }
 
+    // Special handling for space character (don't trim it)
+    if (key === ' ') {
+      return 'Space';
+    }
+
     const trimmedKey = key.trim();
     if (trimmedKey.length === 0) {
       return '';
     }
 
     const keyMap: { [key: string]: string } = {
-      'control': 'Ctrl',
-      'ctrl': 'Ctrl',
-      'alt': 'Alt',
-      'shift': 'Shift',
-      'meta': 'Ctrl', // Meta key maps to Ctrl for consistency
-      'cmd': 'Ctrl',  // Cmd key maps to Ctrl for consistency
-      'command': 'Ctrl',
-      'arrowup': 'ArrowUp',
-      'arrowdown': 'ArrowDown',
-      'arrowleft': 'ArrowLeft',
-      'arrowright': 'ArrowRight',
+      control: 'Ctrl',
+      ctrl: 'Ctrl',
+      alt: 'Alt',
+      shift: 'Shift',
+      meta: 'Ctrl', // Meta key maps to Ctrl for consistency
+      cmd: 'Ctrl', // Cmd key maps to Ctrl for consistency
+      command: 'Ctrl',
+      arrowup: 'ArrowUp',
+      arrowdown: 'ArrowDown',
+      arrowleft: 'ArrowLeft',
+      arrowright: 'ArrowRight',
       ' ': 'Space',
-      'space': 'Space',
-      'enter': 'Enter',
-      'return': 'Enter',
-      'escape': 'Escape',
-      'esc': 'Escape',
-      'delete': 'Delete',
-      'del': 'Delete',
-      'backspace': 'Backspace',
-      'tab': 'Tab',
-      'capslock': 'CapsLock',
-      'numlock': 'NumLock',
-      'scrolllock': 'ScrollLock',
-      'pause': 'Pause',
-      'contextmenu': 'ContextMenu',
-      'printscreen': 'PrintScreen',
-      'insert': 'Insert',
-      'home': 'Home',
-      'end': 'End',
-      'pageup': 'PageUp',
-      'pagedown': 'PageDown',
-      'f1': 'F1',
-      'f2': 'F2',
-      'f3': 'F3',
-      'f4': 'F4',
-      'f5': 'F5',
-      'f6': 'F6',
-      'f7': 'F7',
-      'f8': 'F8',
-      'f9': 'F9',
-      'f10': 'F10',
-      'f11': 'F11',
-      'f12': 'F12',
+      space: 'Space',
+      enter: 'Enter',
+      return: 'Enter',
+      escape: 'Escape',
+      esc: 'Escape',
+      delete: 'Delete',
+      del: 'Delete',
+      backspace: 'Backspace',
+      tab: 'Tab',
+      capslock: 'CapsLock',
+      numlock: 'NumLock',
+      scrolllock: 'ScrollLock',
+      pause: 'Pause',
+      contextmenu: 'ContextMenu',
+      printscreen: 'PrintScreen',
+      insert: 'Insert',
+      home: 'Home',
+      end: 'End',
+      pageup: 'PageUp',
+      pagedown: 'PageDown',
+      f1: 'F1',
+      f2: 'F2',
+      f3: 'F3',
+      f4: 'F4',
+      f5: 'F5',
+      f6: 'F6',
+      f7: 'F7',
+      f8: 'F8',
+      f9: 'F9',
+      f10: 'F10',
+      f11: 'F11',
+      f12: 'F12',
     };
 
     const normalized = keyMap[trimmedKey.toLowerCase()];
@@ -291,7 +309,9 @@ export class KeyboardManager {
     }
 
     // For other keys, capitalize first letter
-    return trimmedKey.charAt(0).toUpperCase() + trimmedKey.slice(1).toLowerCase();
+    return (
+      trimmedKey.charAt(0).toUpperCase() + trimmedKey.slice(1).toLowerCase()
+    );
   }
 
   /**
@@ -339,7 +359,14 @@ export class KeyboardManager {
     }
 
     // Check for valid modifier keys
-    const validModifiers = new Set(['Ctrl', 'Control', 'Alt', 'Shift', 'Cmd', 'Meta']);
+    const validModifiers = new Set([
+      'Ctrl',
+      'Control',
+      'Alt',
+      'Shift',
+      'Cmd',
+      'Meta',
+    ]);
     const modifiers = parts.slice(0, -1);
 
     for (const modifier of modifiers) {
@@ -366,13 +393,50 @@ export class KeyboardManager {
     }
 
     // Single letter keys (like 'B') should require a modifier
-    const functionKeys = new Set(['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
-                                  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-                                  'Enter', 'Escape', 'Tab', 'Space', 'Delete', 'Insert', 'Home', 'End',
-                                  'PageUp', 'PageDown', 'Backspace', 'PrintScreen', 'ScrollLock', 'Pause']);
+    const functionKeys = new Set([
+      'F1',
+      'F2',
+      'F3',
+      'F4',
+      'F5',
+      'F6',
+      'F7',
+      'F8',
+      'F9',
+      'F10',
+      'F11',
+      'F12',
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Enter',
+      'Escape',
+      'Tab',
+      'Space',
+      'Delete',
+      'Insert',
+      'Home',
+      'End',
+      'PageUp',
+      'PageDown',
+      'Backspace',
+      'PrintScreen',
+      'ScrollLock',
+      'Pause',
+    ]);
 
-    if (keyPart.length === 1 && !functionKeys.has(keyPart) && modifiers.length === 0) {
-      return { valid: false, error: 'Single letter keys require a modifier (e.g., Ctrl+B)' };
+    if (
+      keyPart.length === 1 &&
+      !functionKeys.has(keyPart) &&
+      modifiers.length === 0
+    ) {
+      return {
+        valid: false,
+        error: 'Single letter keys require a modifier (e.g., Ctrl+B)',
+      };
     }
 
     return { valid: true };
