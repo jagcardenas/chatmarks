@@ -301,20 +301,13 @@ async function createChatGPTBranch(contextPrompt) {
 }
 ```
 
-**Claude Approach:**
+**Claude Approach (No direct API calls):**
 ```javascript
 async function createClaudeBranch(contextPrompt) {
-  // Use Claude's new conversation endpoint
-  await fetch('https://claude.ai/api/new_conversation', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      initial_prompt: contextPrompt,
-      model: 'claude-3-opus'
-    })
-  });
+  // Open a new Claude tab and inject the prepared context into the composer
+  // Note: Avoid direct API calls from the extension to preserve privacy policy.
+  window.open('https://claude.ai/new', '_blank');
+  // The content script in the new tab would wait for the input area and insert contextPrompt.
 }
 ```
 

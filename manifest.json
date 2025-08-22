@@ -44,21 +44,5 @@
     "https://grok.x.ai/*"
   ],
 
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "src/content/ui/*.html",
-        "src/content/ui/*.css"
-      ],
-      "matches": [
-        "https://chat.openai.com/*",
-        "https://chatgpt.com/*",
-        "https://claude.ai/*",
-        "https://x.com/*",
-        "https://grok.x.ai/*"
-      ]
-    }
-  ],
-
   "options_page": "src/options/index.html"
 }

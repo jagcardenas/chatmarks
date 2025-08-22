@@ -12,80 +12,38 @@
 import { Bookmark, SelectionRange, Platform } from '../src/types/bookmark';
 import { HighlightRenderer } from '../src/content/ui/highlights/HighlightRenderer';
 import { AnchorSystem } from '../src/content/anchoring/AnchorSystem';
+import { JSDOM } from 'jsdom';
 
-// Mock document and DOM elements for testing
-const mockDocument = {
-  createRange: jest.fn(),
-  createElement: jest.fn(),
-  createDocumentFragment: jest.fn(),
-  createTreeWalker: jest.fn(),
-  evaluate: jest.fn(),
-  querySelectorAll: jest.fn(),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-} as unknown as Document;
+// JSDOM document for testing
+let jsdomDocument: Document;
 
 describe('Highlight Rendering System', () => {
   let highlightRenderer: HighlightRenderer;
   let anchorSystem: AnchorSystem;
   let mockElement: Element;
   let mockRange: Range;
+  let startIndex: number;
 
   beforeEach(() => {
-    // Reset mocks
-    jest.clearAllMocks();
+    // Initialize JSDOM document with simple paragraph (matches /html/body/p[1])
+    const dom = new JSDOM(
+      '<!doctype html><html><body><p>This is a test paragraph with some text to highlight for testing purposes.</p></body></html>'
+    );
+    jsdomDocument = dom.window.document;
 
-    // Create mock DOM elements
-    mockElement = {
-      textContent: 'This is a test paragraph with some text to highlight for testing purposes.',
-      parentElement: null,
-      isConnected: true,
-      getAttribute: jest.fn(),
-      setAttribute: jest.fn(),
-      classList: {
-        add: jest.fn(),
-        remove: jest.fn(),
-        contains: jest.fn(),
-      },
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    } as unknown as Element;
-
-    mockRange = {
-      startContainer: mockElement,
-      endContainer: mockElement,
-      startOffset: 10,
-      endOffset: 25,
-      collapsed: false,
-      toString: () => 'test paragraph',
-      cloneRange: () => mockRange,
-      getBoundingClientRect: () => ({
-        top: 100,
-        left: 100,
-        width: 200,
-        height: 20,
-        bottom: 120,
-        right: 300,
-      }),
-      setStart: jest.fn(),
-      setEnd: jest.fn(),
-      selectNodeContents: jest.fn(),
-    } as unknown as Range;
-
-    // Mock document methods
-    mockDocument.createRange.mockReturnValue(mockRange);
-    mockDocument.createElement.mockReturnValue(mockElement);
-    mockDocument.createDocumentFragment.mockReturnValue({
-      appendChild: jest.fn(),
-    });
-    mockDocument.evaluate.mockReturnValue({
-      singleNodeValue: mockElement,
-      iterateNext: jest.fn(),
-    });
+    // Prepare element and range for selection
+    const p = jsdomDocument.querySelector('p') as Element;
+    const textNode = p.firstChild as Text;
+    const selectedText = 'test paragraph';
+    startIndex = textNode.textContent!.indexOf(selectedText);
+    mockRange = jsdomDocument.createRange();
+    mockRange.setStart(textNode, startIndex);
+    mockRange.setEnd(textNode, startIndex + selectedText.length);
+    mockElement = p;
 
     // Initialize systems
-    anchorSystem = new AnchorSystem(mockDocument);
-    highlightRenderer = new HighlightRenderer(mockDocument);
+    anchorSystem = new AnchorSystem(jsdomDocument);
+    highlightRenderer = new HighlightRenderer(jsdomDocument);
   });
 
   describe('Text Anchoring Integration', () => {
@@ -103,8 +61,8 @@ describe('Highlight Rendering System', () => {
         },
         contextBefore: 'This is a ',
         contextAfter: ' with some text',
-        startOffset: 10,
-        endOffset: 25,
+        startOffset: startIndex,
+        endOffset: startIndex + 'test paragraph'.length,
         messageId: 'msg-123',
         conversationId: 'conv-456',
         timestamp: new Date().toISOString(),
@@ -134,8 +92,8 @@ describe('Highlight Rendering System', () => {
         },
         contextBefore: 'This is a ',
         contextAfter: ' with some text',
-        startOffset: 10,
-        endOffset: 25,
+        startOffset: startIndex,
+        endOffset: startIndex + 'test paragraph'.length,
         messageId: 'msg-123',
         conversationId: 'conv-456',
         timestamp: new Date().toISOString(),
@@ -160,8 +118,8 @@ describe('Highlight Rendering System', () => {
         messageId: 'msg-789',
         anchor: {
           selectedText: 'test paragraph',
-          startOffset: 10,
-          endOffset: 25,
+          startOffset: startIndex,
+          endOffset: startIndex + 'test paragraph'.length,
           xpathSelector: '/html/body/p[1]',
           messageId: 'msg-789',
           contextBefore: 'This is a ',
@@ -192,8 +150,8 @@ describe('Highlight Rendering System', () => {
         messageId: 'msg-789',
         anchor: {
           selectedText: 'test paragraph',
-          startOffset: 10,
-          endOffset: 25,
+          startOffset: startIndex,
+          endOffset: startIndex + 'test paragraph'.length,
           xpathSelector: '/html/body/p[1]',
           messageId: 'msg-789',
           contextBefore: 'This is a ',
@@ -209,7 +167,11 @@ describe('Highlight Rendering System', () => {
         color: '#ffeb3b',
       };
 
-      const result = await highlightRenderer.renderHighlight(bookmark, undefined, true);
+      const result = await highlightRenderer.renderHighlight(
+        bookmark,
+        undefined,
+        true
+      );
 
       expect(result.success).toBe(true);
       expect(highlightRenderer.hasActiveHighlight('bookmark-flash')).toBe(true);
@@ -223,8 +185,8 @@ describe('Highlight Rendering System', () => {
         messageId: 'msg-789',
         anchor: {
           selectedText: 'test paragraph',
-          startOffset: 10,
-          endOffset: 25,
+          startOffset: startIndex,
+          endOffset: startIndex + 'test paragraph'.length,
           xpathSelector: '/html/body/p[1]',
           messageId: 'msg-789',
           contextBefore: 'This is a ',
@@ -242,12 +204,16 @@ describe('Highlight Rendering System', () => {
 
       // First render the highlight
       await highlightRenderer.renderHighlight(bookmark);
-      expect(highlightRenderer.hasActiveHighlight('bookmark-remove')).toBe(true);
+      expect(highlightRenderer.hasActiveHighlight('bookmark-remove')).toBe(
+        true
+      );
 
       // Then remove it
       const removed = highlightRenderer.removeHighlight('bookmark-remove');
       expect(removed).toBe(true);
-      expect(highlightRenderer.hasActiveHighlight('bookmark-remove')).toBe(false);
+      expect(highlightRenderer.hasActiveHighlight('bookmark-remove')).toBe(
+        false
+      );
     });
 
     it('should update highlight styling', async () => {
@@ -258,8 +224,8 @@ describe('Highlight Rendering System', () => {
         messageId: 'msg-789',
         anchor: {
           selectedText: 'test paragraph',
-          startOffset: 10,
-          endOffset: 25,
+          startOffset: startIndex,
+          endOffset: startIndex + 'test paragraph'.length,
           xpathSelector: '/html/body/p[1]',
           messageId: 'msg-789',
           contextBefore: 'This is a ',
@@ -336,8 +302,8 @@ describe('Highlight Rendering System', () => {
           messageId: 'msg-789',
           anchor: {
             selectedText: 'test paragraph',
-            startOffset: 10,
-            endOffset: 25,
+            startOffset: startIndex,
+            endOffset: startIndex + 'test paragraph'.length,
             xpathSelector: '/html/body/p[1]',
             messageId: 'msg-789',
             contextBefore: 'This is a ',
@@ -375,8 +341,8 @@ describe('Highlight Rendering System', () => {
         messageId: 'msg-789',
         anchor: {
           selectedText: 'test paragraph with',
-          startOffset: 10,
-          endOffset: 30,
+          startOffset: startIndex,
+          endOffset: startIndex + 'test paragraph with'.length,
           xpathSelector: '/html/body/p[1]',
           messageId: 'msg-789',
           contextBefore: 'This is a ',
@@ -399,8 +365,8 @@ describe('Highlight Rendering System', () => {
         messageId: 'msg-789',
         anchor: {
           selectedText: 'paragraph with some',
-          startOffset: 15,
-          endOffset: 35,
+          startOffset: startIndex + 5,
+          endOffset: startIndex + 5 + 'paragraph with some'.length,
           xpathSelector: '/html/body/p[1]',
           messageId: 'msg-789',
           contextBefore: 'test ',
@@ -421,8 +387,12 @@ describe('Highlight Rendering System', () => {
       await highlightRenderer.renderHighlight(bookmark2);
 
       // Verify both highlights exist
-      expect(highlightRenderer.hasActiveHighlight('bookmark-overlap-1')).toBe(true);
-      expect(highlightRenderer.hasActiveHighlight('bookmark-overlap-2')).toBe(true);
+      expect(highlightRenderer.hasActiveHighlight('bookmark-overlap-1')).toBe(
+        true
+      );
+      expect(highlightRenderer.hasActiveHighlight('bookmark-overlap-2')).toBe(
+        true
+      );
 
       const metrics = highlightRenderer.getMetrics();
       expect(metrics.totalHighlights).toBe(2);
@@ -480,11 +450,14 @@ describe('Highlight Rendering System', () => {
         },
       ];
 
-      const restoreResult = await highlightRenderer.restoreHighlights(bookmarks);
+      const restoreResult =
+        await highlightRenderer.restoreHighlights(bookmarks);
 
       expect(restoreResult.successfullyRestored).toBeGreaterThanOrEqual(0);
       expect(restoreResult.totalProcessed).toBe(2);
-      expect(restoreResult.successfullyRestored + restoreResult.failedToRestore).toBe(2);
+      expect(
+        restoreResult.successfullyRestored + restoreResult.failedToRestore
+      ).toBe(2);
 
       const metrics = highlightRenderer.getMetrics();
       expect(metrics.performance.lastRestoreTime).toBeGreaterThan(0);
@@ -500,8 +473,8 @@ describe('Highlight Rendering System', () => {
         messageId: 'msg-789',
         anchor: {
           selectedText: 'test paragraph',
-          startOffset: 10,
-          endOffset: 25,
+          startOffset: startIndex,
+          endOffset: startIndex + 'test paragraph'.length,
           xpathSelector: '/html/body/p[1]',
           messageId: 'msg-789',
           contextBefore: 'This is a ',
@@ -518,7 +491,9 @@ describe('Highlight Rendering System', () => {
       };
 
       await highlightRenderer.renderHighlight(bookmark);
-      expect(highlightRenderer.hasActiveHighlight('bookmark-cleanup')).toBe(true);
+      expect(highlightRenderer.hasActiveHighlight('bookmark-cleanup')).toBe(
+        true
+      );
 
       highlightRenderer.cleanup();
 
@@ -539,8 +514,8 @@ describe('Highlight Rendering System', () => {
           messageId: 'msg-789',
           anchor: {
             selectedText: 'test paragraph',
-            startOffset: 10,
-            endOffset: 25,
+            startOffset: startIndex,
+            endOffset: startIndex + 'test paragraph'.length,
             xpathSelector: '/html/body/p[1]',
             messageId: 'msg-789',
             contextBefore: 'This is a ',
@@ -610,7 +585,8 @@ describe('Highlight Rendering System', () => {
         // Missing required fields
       } as unknown as Bookmark;
 
-      const result = await highlightRenderer.renderHighlight(incompleteBookmark);
+      const result =
+        await highlightRenderer.renderHighlight(incompleteBookmark);
 
       expect(result.success).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);

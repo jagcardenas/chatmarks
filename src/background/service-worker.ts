@@ -23,7 +23,7 @@ chrome.runtime.onInstalled.addListener(() => {
   setupContextMenus();
 
   // Initialize default settings
-  initializeDefaultSettings(); //TODO: Check if await need or why async is needed here
+  initializeDefaultSettings();
 });
 
 /**
@@ -35,6 +35,7 @@ function setupContextMenus(): void {
     title: 'Create Bookmark',
     contexts: ['selection'],
     documentUrlPatterns: [
+      'https://chat.openai.com/*',
       'https://chatgpt.com/*',
       'https://claude.ai/*',
       'https://grok.x.ai/*',
