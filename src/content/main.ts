@@ -45,3 +45,9 @@ if (document.readyState === 'loading') {
 window.addEventListener('beforeunload', () => {
   cleanupContentScript();
 });
+
+// Export onExecute function for CRXJS compatibility
+export function onExecute() {
+  // This function is called by the CRXJS content script loader
+  // The initialization is already handled by the main execution above
+}
