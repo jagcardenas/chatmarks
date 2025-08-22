@@ -145,8 +145,11 @@ export class GrokAdapter extends BasePlatformAdapter {
         return match[1];
       }
       
-      // Fallback: Generate ID based on Grok session
-      return this.generateConversationId();
+      // Only generate ID if we have legitimate Grok indicators
+      if (this.hasLegitimateGrokIndicators()) {
+        return this.generateConversationId();
+      }
+      return null;
     }
 
     // Pattern for x.com: https://x.com/i/grok, https://x.com/grok/[id], or similar
@@ -159,6 +162,8 @@ export class GrokAdapter extends BasePlatformAdapter {
         if (grokIndex + 1 < pathSegments.length) {
           return pathSegments[grokIndex + 1] || null;
         }
+        // If we have /grok in path but no specific ID, still generate one
+        return this.generateConversationId();
       }
       
       // Check for conversation ID in URL parameters
@@ -171,15 +176,15 @@ export class GrokAdapter extends BasePlatformAdapter {
         return conversationId;
       }
       
-      // Generate ID based on Grok session on X
-      return this.generateConversationId();
+      // Only generate ID if we have legitimate Grok indicators
+      if (this.hasLegitimateGrokIndicators()) {
+        return this.generateConversationId();
+      }
+      return null;
     }
 
-    // Fallback: Generate conversation ID from page context
-    const grokIndicators = document.querySelectorAll(
-      '.message-bubble, [data-testid*="grok"], [class*="grok"], [data-grok-id]'
-    );
-    if (grokIndicators.length > 0) {
+    // For other domains, only return ID if we have clear Grok indicators
+    if (this.hasLegitimateGrokIndicators()) {
       return this.generateConversationId();
     }
 
@@ -373,7 +378,7 @@ export class GrokAdapter extends BasePlatformAdapter {
    * Checks if an element is related to Grok conversation
    */
   private isGrokRelatedElement(element: Element): boolean {
-    // Check for Grok-specific attributes or classes
+    // Check for strong Grok-specific attributes or classes
     const hasGrokAttributes = element.getAttribute('data-testid')?.includes('grok') ||
                              element.className.includes('grok') ||
                              element.getAttribute('data-grok-id') !== null;
@@ -381,13 +386,25 @@ export class GrokAdapter extends BasePlatformAdapter {
     // Check if element is within Grok conversation area
     const grokContainer = element.closest('[data-testid*="grok"], [class*="grok"]');
     
-    // Check for Grok conversation patterns in content
-    const content = element.textContent?.toLowerCase() || '';
-    const hasGrokContent = content.includes('grok') || 
-                          content.includes('@grok') ||
-                          element.querySelector('[alt*="grok" i]') !== null;
+    // Strong indicator: Grok-specific selectors
+    if (hasGrokAttributes || grokContainer !== null) {
+      return true;
+    }
 
-    return hasGrokAttributes || grokContainer !== null || hasGrokContent;
+    // Check for legitimate Grok conversation patterns in content
+    const content = element.textContent?.toLowerCase() || '';
+    const hasGrokMention = content.includes('@grok');
+    const hasGrokAvatar = element.querySelector('[alt*="grok" i]') !== null;
+    
+    // Be more restrictive: require specific Grok indicators, not just "grok" in text
+    // This prevents regular tweets that happen to mention "grok" from being included
+    const hasStrongGrokIndicators = hasGrokMention || hasGrokAvatar;
+    
+    // Additional check: ensure this is in a conversation context, not a regular tweet
+    const isInConversationContext = element.closest('.message-bubble, .message-container') !== null ||
+                                   element.matches('.message-bubble, .message-container');
+    
+    return hasStrongGrokIndicators && isInConversationContext;
   }
 
   /**
@@ -733,6 +750,23 @@ export class GrokAdapter extends BasePlatformAdapter {
     }
 
     contentElement.appendChild(indicator);
+  }
+
+  /**
+   * Checks for legitimate Grok indicators on the page
+   */
+  private hasLegitimateGrokIndicators(): boolean {
+    // Strong indicators of Grok presence
+    const hasGrokElements = document.querySelector('[data-testid*="grok"], [class*="grok"], .message-bubble') !== null;
+    const hasGrokBranding = document.querySelector('[aria-label*="Grok"], [alt*="Grok"]') !== null;
+    
+    // Only check for @grok mentions in the body content, not the entire document
+    // This prevents false positives from page titles or meta tags
+    const bodyTextContent = document.body?.textContent || '';
+    const hasGrokMentions = bodyTextContent.includes('@grok');
+    
+    // Require strong evidence of Grok conversation, not just the word "grok"
+    return hasGrokElements || hasGrokBranding || hasGrokMentions;
   }
 
   /**

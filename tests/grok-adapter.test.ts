@@ -102,19 +102,33 @@ class TestGrokAdapter extends GrokAdapter {
         return conversationId;
       }
       
-      // Generate ID based on Grok session on X
-      return this.generateTestConversationId();
+      // Only generate ID if we have legitimate Grok indicators
+      if (this.hasTestLegitimateGrokIndicators()) {
+        return this.generateTestConversationId();
+      }
+      return null;
     }
 
-    // Fallback: Generate conversation ID from page context
-    const grokIndicators = document.querySelectorAll(
-      '.message-bubble, [data-testid*="grok"], [class*="grok"], [data-grok-id]'
-    );
-    if (grokIndicators.length > 0) {
+    // For other domains, only return ID if we have clear Grok indicators
+    if (this.hasTestLegitimateGrokIndicators()) {
       return this.generateTestConversationId();
     }
 
     return null;
+  }
+
+  private hasTestLegitimateGrokIndicators(): boolean {
+    // Strong indicators of Grok presence
+    const hasGrokElements = document.querySelector('[data-testid*="grok"], [class*="grok"], .message-bubble') !== null;
+    const hasGrokBranding = document.querySelector('[aria-label*="Grok"], [alt*="Grok"]') !== null;
+    
+    // Only check for @grok mentions in the body content, not the entire document
+    // This prevents false positives from page titles or meta tags
+    const bodyTextContent = document.body?.textContent || '';
+    const hasGrokMentions = bodyTextContent.includes('@grok');
+    
+    // Require strong evidence of Grok conversation, not just the word "grok"
+    return hasGrokElements || hasGrokBranding || hasGrokMentions;
   }
 
   private generateTestConversationId(): string {
