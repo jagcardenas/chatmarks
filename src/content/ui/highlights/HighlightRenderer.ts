@@ -7,7 +7,7 @@
  */
 
 import { Bookmark, TextAnchor } from '../../../types/bookmark';
-import { AnchorSystem } from '../anchoring/AnchorSystem';
+import { AnchorSystem } from '../anchoring/index';
 import { TextWrapper, WrappedElement } from './TextWrapper';
 import { OverlapManager, HighlightData } from './OverlapManager';
 

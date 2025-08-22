@@ -259,19 +259,17 @@ export class OverlapManager {
   private findOverlapRange(ranges1: Range[], ranges2: Range[]): Range | null {
     for (const range1 of ranges1) {
       for (const range2 of ranges2) {
-        if (range1.intersectsNode && range2.intersectsNode) {
-          try {
-            if (this.rangesIntersect(range1, range2)) {
-              // Create intersection range
-              const intersection = this.createIntersectionRange(range1, range2);
-              if (intersection) {
-                return intersection;
-              }
+        try {
+          if (this.rangesIntersect(range1, range2)) {
+            // Create intersection range
+            const intersection = this.createIntersectionRange(range1, range2);
+            if (intersection) {
+              return intersection;
             }
-          } catch (error) {
-            // Range intersection failed, continue checking other ranges
-            console.debug('Chatmarks: Range intersection check failed:', error);
           }
+        } catch (error) {
+          // Range intersection failed, continue checking other ranges
+          console.debug('Chatmarks: Range intersection check failed:', error);
         }
       }
     }
