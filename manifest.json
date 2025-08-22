@@ -17,6 +17,7 @@
         "https://chatgpt.com/*",
         "https://claude.ai/*",
         "https://x.com/*",
+        "https://twitter.com/*",
         "https://grok.x.ai/*"
       ],
       "js": ["src/content/main.ts"],
@@ -41,6 +42,7 @@
     "https://chatgpt.com/*",
     "https://claude.ai/*",
     "https://x.com/*",
+    "https://twitter.com/*",
     "https://grok.x.ai/*"
   ],
 

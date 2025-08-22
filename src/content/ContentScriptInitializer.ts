@@ -9,7 +9,7 @@
 import { Platform } from '../types/bookmark';
 import { TextSelection } from './selection/TextSelection';
 import { AnchorSystem } from './anchoring/AnchorSystem';
-import { ChatGPTAdapter, createPlatformAdapter } from './adapters';
+import { ChatGPTAdapter, ClaudeAdapter, GrokAdapter, createPlatformAdapter } from './adapters';
 import { HighlightRenderer } from './ui/highlights/HighlightRenderer';
 import { KeyboardManager } from './keyboard/KeyboardManager';
 import { ThemeManager } from './utils/ThemeManager';
@@ -29,7 +29,7 @@ export class ContentScriptInitializer {
   // Core managers
   private textSelection: TextSelection | null = null;
   private anchorSystem: AnchorSystem | null = null;
-  private platformAdapter: ChatGPTAdapter | null = null;
+  private platformAdapter: ChatGPTAdapter | ClaudeAdapter | GrokAdapter | null = null;
   private highlightRenderer: HighlightRenderer | null = null;
   private keyboardManager: KeyboardManager | null = null;
   private themeManager: ThemeManager | null = null;

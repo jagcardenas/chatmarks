@@ -16,7 +16,7 @@ import {
 import { MessageType, ExtensionMessage } from '../types/messages';
 import { AnchorSystem } from './anchoring/AnchorSystem';
 import { HighlightRenderer } from './ui/highlights/HighlightRenderer';
-import { ChatGPTAdapter } from './adapters';
+import { ChatGPTAdapter, ClaudeAdapter, GrokAdapter } from './adapters';
 import {
   extractConversationId,
   generateMessageId,
@@ -25,7 +25,7 @@ import {
 export class BookmarkOperations {
   private anchorSystem: AnchorSystem;
   private highlightRenderer: HighlightRenderer;
-  private platformAdapter: ChatGPTAdapter | null;
+  private platformAdapter: ChatGPTAdapter | ClaudeAdapter | GrokAdapter | null;
   private currentPlatform: Platform;
 
   // Navigation controller will be set by ContentScriptInitializer
@@ -34,7 +34,7 @@ export class BookmarkOperations {
   constructor(
     anchorSystem: AnchorSystem,
     highlightRenderer: HighlightRenderer,
-    platformAdapter: ChatGPTAdapter | null,
+    platformAdapter: ChatGPTAdapter | ClaudeAdapter | GrokAdapter | null,
     currentPlatform: Platform
   ) {
     this.anchorSystem = anchorSystem;

@@ -16,7 +16,11 @@ export {
 
 // Platform-specific implementations
 export { ChatGPTAdapter } from './ChatGPTAdapter';
+export { ClaudeAdapter } from './ClaudeAdapter';
+export { GrokAdapter } from './GrokAdapter';
 import { ChatGPTAdapter } from './ChatGPTAdapter';
+import { ClaudeAdapter } from './ClaudeAdapter';
+import { GrokAdapter } from './GrokAdapter';
 
 // Re-export related types from bookmark types
 export type {
@@ -30,7 +34,7 @@ export type {
  * Factory function to create the appropriate platform adapter
  * based on the current page context
  */
-export function createPlatformAdapter(): ChatGPTAdapter | null {
+export function createPlatformAdapter(): ChatGPTAdapter | ClaudeAdapter | GrokAdapter | null {
   const hostname = window.location.hostname;
 
   // ChatGPT detection
@@ -38,22 +42,19 @@ export function createPlatformAdapter(): ChatGPTAdapter | null {
     return new ChatGPTAdapter();
   }
 
-  // Claude detection (placeholder for future implementation)
+  // Claude detection
   if (hostname.includes('claude.ai')) {
-    // return new ClaudeAdapter();
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Claude adapter not yet implemented');
-    }
-    return null;
+    return new ClaudeAdapter();
   }
 
-  // Grok detection (placeholder for future implementation)
-  if (hostname.includes('x.com') || hostname.includes('grok.x.ai')) {
-    // return new GrokAdapter();
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Grok adapter not yet implemented');
+  // Grok detection
+  if (hostname.includes('x.com') || hostname.includes('twitter.com')) {
+    // Check if this is actually a Grok conversation
+    const pathname = window.location.pathname;
+    if (pathname.includes('grok') || pathname.includes('i/grok') || 
+        document.querySelector('[data-testid*="grok"], [class*="grok"]')) {
+      return new GrokAdapter();
     }
-    return null;
   }
 
   // No supported platform detected
@@ -74,8 +75,13 @@ export function detectCurrentPlatform(): import('../../types/bookmark').Platform
     return 'claude';
   }
   
-  if (hostname.includes('x.com') || hostname.includes('grok.x.ai')) {
-    return 'grok';
+  if (hostname.includes('x.com') || hostname.includes('twitter.com')) {
+    // Check if this is actually a Grok conversation
+    const pathname = window.location.pathname;
+    if (pathname.includes('grok') || pathname.includes('i/grok') || 
+        document.querySelector('[data-testid*="grok"], [class*="grok"]')) {
+      return 'grok';
+    }
   }
 
   return null;
@@ -138,7 +144,12 @@ export function isClaudePage(): boolean {
 
 export function isGrokPage(): boolean {
   const hostname = window.location.hostname;
-  return hostname.includes('x.com') || hostname.includes('grok.x.ai');
+  if (hostname.includes('x.com') || hostname.includes('twitter.com')) {
+    const pathname = window.location.pathname;
+    return pathname.includes('grok') || pathname.includes('i/grok') || 
+           document.querySelector('[data-testid*="grok"], [class*="grok"]') !== null;
+  }
+  return false;
 }
 
 /**
