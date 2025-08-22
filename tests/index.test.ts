@@ -21,7 +21,6 @@ describe('Index Exports', () => {
     // This test verifies that the module can be imported without runtime errors
     // and that all type re-exports are properly configured
     expect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const index = require('../src/index');
       // If we get here, the module loaded successfully
       expect(index).toBeDefined();

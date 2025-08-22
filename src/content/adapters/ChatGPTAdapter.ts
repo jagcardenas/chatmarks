@@ -248,7 +248,7 @@ export class ChatGPTAdapter extends BasePlatformAdapter {
    */
   private findAllMessageContainers(): Element[] {
     // Try primary selectors first
-    let elements = Array.from(
+    const elements = Array.from(
       document.querySelectorAll(this.config.primarySelectors.messageContainer)
     );
 

@@ -326,6 +326,14 @@ describe('StorageService', () => {
         return Promise.resolve();
       });
 
+      // Mock saveImmediate to call chrome.storage directly for this test
+      (storageService as any).saveImmediate = async (
+        key: string,
+        data: any
+      ) => {
+        await chrome.storage.local.set({ [key]: data });
+      };
+
       // Act
       const result = await storageService.updateBookmark(sampleBookmark.id, {
         note: 'updated',
