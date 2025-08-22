@@ -11,6 +11,8 @@ import { AnchorSystem } from '../anchoring/AnchorSystem';
 import { TextWrapper, WrappedElement } from './TextWrapper';
 import { OverlapManager, HighlightData } from './OverlapManager';
 
+type PromiseSettledResult<T> = PromiseFulfilledResult<T> | PromiseRejectedResult;
+
 export interface HighlightStyle {
   /** CSS class name for the highlight */
   className: string;
@@ -270,7 +272,9 @@ export class HighlightRenderer {
       }
 
       // Apply custom styling
-      this.applyCustomStyling(wrapResult.wrappedElements, highlightStyle);
+      if (highlightStyle.cssProperties && Object.keys(highlightStyle.cssProperties).length > 0) {
+        this.applyCustomStyling(wrapResult.wrappedElements, highlightStyle);
+      }
 
       // Record performance
       const renderTime = performance.now() - startTime;
@@ -406,8 +410,8 @@ export class HighlightRenderer {
         const batchResults = await Promise.allSettled(batchPromises);
 
         for (let j = 0; j < batch.length; j++) {
-          const bookmark = batch[j];
-          const result = batchResults[j];
+          const bookmark = batch[j]!;
+          const result = batchResults[j]!;
 
           if (result.status === 'fulfilled' && result.value.success) {
             successfullyRestored++;
@@ -417,8 +421,8 @@ export class HighlightRenderer {
             failedBookmarks.push(bookmark.id);
 
             const errorMessage = result.status === 'rejected'
-              ? result.reason
-              : result.value.errors.join(', ');
+              ? (result as PromiseRejectedResult).reason
+              : (result as PromiseFulfilledResult<RenderResult>).value.errors.join(', ');
             errors.push(`Failed to restore bookmark ${bookmark.id}: ${errorMessage}`);
           }
         }
@@ -681,9 +685,11 @@ export class HighlightRenderer {
     }
 
     for (const wrappedElement of wrappedElements) {
-      const element = wrappedElement.highlightElement;
-      for (const [property, value] of Object.entries(style.cssProperties)) {
-        (element.style as any)[property] = value;
+      const element = wrappedElement.highlightElement as HTMLElement;
+      if (element && element.style) {
+        for (const [property, value] of Object.entries(style.cssProperties)) {
+          (element.style as any)[property] = value;
+        }
       }
     }
   }

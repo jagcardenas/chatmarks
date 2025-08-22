@@ -207,7 +207,7 @@ export class TextWrapper {
       const current = sortedWrapped[i];
       const next = sortedWrapped[i + 1];
 
-      if (this.areElementsAdjacent(current.highlightElement, next.highlightElement)) {
+      if (current && next && this.areElementsAdjacent(current.highlightElement, next.highlightElement)) {
         // Merge the elements
         this.mergeHighlightElements(current, next);
         mergeCount++;
@@ -346,20 +346,22 @@ export class TextWrapper {
         const isLast = i === textNodes.length - 1;
 
         const startOffset = isFirst ? range.startOffset : 0;
-        const endOffset = isLast ? range.endOffset : textNode.textContent?.length || 0;
+        const endOffset = isLast ? range.endOffset : textNode?.textContent?.length || 0;
 
-        const result = this.wrapTextInNode(
-          textNode,
-          startOffset,
-          endOffset,
-          bookmarkId,
-          highlightClass
-        );
+        if (textNode) {
+          const result = this.wrapTextInNode(
+            textNode,
+            startOffset,
+            endOffset,
+            bookmarkId,
+            highlightClass
+          );
 
-        if (result.success && result.wrappedElement) {
-          wrappedElements.push(result.wrappedElement);
-        } else if (result.errors.length > 0) {
-          errors.push(...result.errors);
+          if (result.success && result.wrappedElement) {
+            wrappedElements.push(result.wrappedElement);
+          } else if (result.errors.length > 0) {
+            errors.push(...result.errors);
+          }
         }
       }
 
@@ -393,9 +395,9 @@ export class TextWrapper {
       const fullText = textNode.textContent || '';
       const selectedText = fullText.substring(startOffset, endOffset);
 
-      if (!selectedText.trim()) {
-        return { success: true }; // No text to wrap, not an error
-      }
+          if (!selectedText.trim()) {
+      return { success: true, errors: [] }; // No text to wrap, not an error
+    }
 
       // Create highlight element
       const highlightElement = this.createHighlightElement(

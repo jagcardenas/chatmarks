@@ -70,18 +70,23 @@ export class OverlapManager {
     }
 
     try {
-      // Create ranges for each highlight
-      const highlightRanges = highlights.map(highlight => ({
+          // Create ranges for each highlight
+    const highlightRanges = highlights.map(highlight => ({
         highlight,
         ranges: this.getHighlightRanges(highlight),
-      }));
+      })).filter(item => item.ranges.length > 0);
 
       // Check for overlaps between each pair
       for (let i = 0; i < highlightRanges.length; i++) {
         for (let j = i + 1; j < highlightRanges.length; j++) {
+          const highlightRangeI = highlightRanges[i];
+          const highlightRangeJ = highlightRanges[j];
+
+          if (!highlightRangeI || !highlightRangeJ) continue;
+
           const overlapRange = this.findOverlapRange(
-            highlightRanges[i].ranges,
-            highlightRanges[j].ranges
+            highlightRangeI.ranges,
+            highlightRangeJ.ranges
           );
 
           if (overlapRange) {
@@ -92,18 +97,18 @@ export class OverlapManager {
 
             if (existingGroup) {
               // Add to existing group if not already present
-              if (!existingGroup.overlappingElements.includes(highlightRanges[i].highlight)) {
-                existingGroup.overlappingElements.push(highlightRanges[i].highlight);
+              if (!existingGroup.overlappingElements.includes(highlightRangeI.highlight)) {
+                existingGroup.overlappingElements.push(highlightRangeI.highlight);
                 existingGroup.overlapCount++;
               }
-              if (!existingGroup.overlappingElements.includes(highlightRanges[j].highlight)) {
-                existingGroup.overlappingElements.push(highlightRanges[j].highlight);
+              if (!existingGroup.overlappingElements.includes(highlightRangeJ.highlight)) {
+                existingGroup.overlappingElements.push(highlightRangeJ.highlight);
                 existingGroup.overlapCount++;
               }
             } else {
               // Create new overlap group
               overlapGroups.push({
-                overlappingElements: [highlightRanges[i].highlight, highlightRanges[j].highlight],
+                overlappingElements: [highlightRangeI.highlight, highlightRangeJ.highlight],
                 overlapRange,
                 overlapCount: 2,
               });
@@ -285,20 +290,20 @@ export class OverlapManager {
         return false;
       }
 
-      // Use Range.intersectsNode if available
-      if (typeof range1.intersectsNode === 'function') {
-        return range1.intersectsNode(range2.commonAncestorContainer) &&
-               range2.intersectsNode(range1.commonAncestorContainer);
+      // Intersection check using bounding rectangles
+      try {
+        const rect1 = range1.getBoundingClientRect();
+        const rect2 = range2.getBoundingClientRect();
+
+        return !(rect1.right < rect2.left ||
+                 rect2.right < rect1.left ||
+                 rect1.bottom < rect2.top ||
+                 rect2.bottom < rect1.top);
+      } catch (error) {
+        // If bounding rect fails, assume no intersection
+        console.debug('Chatmarks: Failed to get bounding rect for intersection check:', error);
+        return false;
       }
-
-      // Fallback intersection check
-      const rect1 = range1.getBoundingClientRect();
-      const rect2 = range2.getBoundingClientRect();
-
-      return !(rect1.right < rect2.left ||
-               rect2.right < rect1.left ||
-               rect1.bottom < rect2.top ||
-               rect2.bottom < rect1.top);
     } catch (error) {
       console.debug('Chatmarks: Range intersection check failed:', error);
       return false;
@@ -364,6 +369,8 @@ export class OverlapManager {
       // Apply opacity-based resolution
       for (let i = 0; i < sortedElements.length; i++) {
         const highlight = sortedElements[i];
+        if (!highlight) continue;
+
         const opacity = this.calculateOpacity(group.overlapCount, highlight.priority);
 
         // Create opacity class
