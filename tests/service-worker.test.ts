@@ -34,7 +34,8 @@ const mockChrome = {
     },
   },
   tabs: {
-    sendMessage: jest.fn(),
+    sendMessage: jest.fn().mockResolvedValue({ success: true }),
+    get: jest.fn().mockResolvedValue({ id: 42, status: 'complete' }),
     onRemoved: {
       addListener: jest.fn(),
     },
@@ -186,10 +187,14 @@ describe('Service Worker', () => {
       const mockTab = { id: 42 };
 
       // Import the service worker module to access its functions
-      const serviceWorkerModule = await import('../src/background/service-worker');
+      const serviceWorkerModule = await import(
+        '../src/background/service-worker'
+      );
 
-      // Mock the isTabConnected function to return true
-      const mockIsTabConnected = jest.spyOn(serviceWorkerModule, 'isTabConnected').mockReturnValue(true);
+      // Mock the isTabConnected function to return true (simulating a connected tab)
+      const mockIsTabConnected = jest
+        .spyOn(serviceWorkerModule, 'isTabConnected')
+        .mockReturnValue(true);
 
       // Get the click handler
       const clickHandler =
@@ -198,7 +203,7 @@ describe('Service Worker', () => {
 
       // Execute the click handler
       if (clickHandler) {
-        clickHandler(mockInfo, mockTab);
+        await clickHandler(mockInfo, mockTab);
       }
 
       // Verify message was sent to content script
