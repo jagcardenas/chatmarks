@@ -203,11 +203,11 @@ export class BookmarkEvents extends EventTarget {
    */
   onBookmarkCreated(
     listener: (event: CustomEvent<BookmarkCreatedEventDetail>) => void,
-    options?: AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions
   ): void {
     this.addEventListener(
       'bookmark:created',
-      listener as EventListener,
+      listener as (event: Event) => void,
       options
     );
   }
@@ -220,11 +220,11 @@ export class BookmarkEvents extends EventTarget {
    */
   onBookmarkUpdated(
     listener: (event: CustomEvent<BookmarkUpdatedEventDetail>) => void,
-    options?: AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions
   ): void {
     this.addEventListener(
       'bookmark:updated',
-      listener as EventListener,
+      listener as (event: Event) => void,
       options
     );
   }
@@ -237,11 +237,11 @@ export class BookmarkEvents extends EventTarget {
    */
   onBookmarkDeleted(
     listener: (event: CustomEvent<BookmarkDeletedEventDetail>) => void,
-    options?: AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions
   ): void {
     this.addEventListener(
       'bookmark:deleted',
-      listener as EventListener,
+      listener as (event: Event) => void,
       options
     );
   }
@@ -254,7 +254,7 @@ export class BookmarkEvents extends EventTarget {
    */
   onBookmarkError(
     listener: (event: CustomEvent<BookmarkErrorEventDetail>) => void,
-    options?: AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions
   ): void {
     this.addEventListener('bookmark:error', listener as EventListener, options);
   }
@@ -267,7 +267,7 @@ export class BookmarkEvents extends EventTarget {
    */
   onBatchOperation(
     listener: (event: CustomEvent<BookmarkBatchEventDetail>) => void,
-    options?: AddEventListenerOptions
+    options?: boolean | AddEventListenerOptions
   ): void {
     this.addEventListener('bookmark:batch', listener as EventListener, options);
   }
@@ -281,8 +281,8 @@ export class BookmarkEvents extends EventTarget {
    */
   removeBookmarkListener(
     type: keyof BookmarkEventMap,
-    listener: EventListener,
-    options?: EventListenerOptions
+    listener: (event: Event) => void,
+    options?: boolean | EventListenerOptions
   ): void {
     this.removeEventListener(type, listener, options);
   }
@@ -300,7 +300,7 @@ export class BookmarkEvents extends EventTarget {
       'bookmark:batch',
     ];
 
-    events.forEach(eventType => {
+    events.forEach(_eventType => {
       // Remove all listeners for this event type
       // Note: This is a simple approach; in production, you might want
       // to track listeners more explicitly for better cleanup

@@ -174,8 +174,8 @@ export abstract class BaseComponent extends HTMLElement {
   protected addEventListenerWithCleanup(
     target: EventTarget,
     type: string,
-    listener: EventListener,
-    options?: AddEventListenerOptions
+    listener: (event: Event) => void,
+    options?: boolean | AddEventListenerOptions
   ): void {
     target.addEventListener(type, listener, options);
 

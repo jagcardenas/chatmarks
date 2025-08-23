@@ -5,7 +5,7 @@
  * Supports customizable shortcuts with conflict detection and platform-specific handling.
  */
 
-import { MessageType, ExtensionMessage } from '../../types/messages';
+// Removed unused imports
 
 export interface KeyboardShortcut {
   id: string;
@@ -32,7 +32,7 @@ export interface ParsedShortcut {
 export class KeyboardManager {
   private shortcuts: Map<string, KeyboardShortcut> = new Map(); // key -> shortcut
   private shortcutKeys: Map<string, string[]> = new Map(); // normalizedKey -> [shortcutIds]
-  private eventListener: EventListener | null = null;
+  private eventListener: ((event: KeyboardEvent) => void) | null = null;
   private _isEnabled: boolean = false; // Start disabled, enable explicitly
   private targetElement: EventTarget | null = null;
 

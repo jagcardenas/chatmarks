@@ -128,7 +128,7 @@ export abstract class BasePlatformAdapter implements PlatformAdapter {
   protected eventListeners: Array<{
     target: EventTarget;
     type: string;
-    listener: EventListenerOrEventListenerObject;
+    listener: (event: Event) => void;
   }> = [];
 
   constructor(config: PlatformAdapterConfig) {
@@ -169,8 +169,8 @@ export abstract class BasePlatformAdapter implements PlatformAdapter {
   protected addEventListener(
     target: EventTarget,
     type: string,
-    listener: EventListenerOrEventListenerObject,
-    options?: AddEventListenerOptions
+    listener: (event: Event) => void,
+    options?: boolean | AddEventListenerOptions
   ): void {
     target.addEventListener(type, listener, options);
     this.eventListeners.push({ target, type, listener });
@@ -180,7 +180,7 @@ export abstract class BasePlatformAdapter implements PlatformAdapter {
    * Helper method to create and track MutationObserver
    */
   protected createObserver(
-    callback: MutationCallback,
+    callback: (mutations: MutationRecord[], observer: MutationObserver) => void,
     _options?: MutationObserverInit
   ): MutationObserver {
     const observer = new MutationObserver(callback);

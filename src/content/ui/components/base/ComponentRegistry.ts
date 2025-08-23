@@ -107,7 +107,7 @@ export class ComponentRegistry {
    */
   static async whenDefined(
     componentName: string
-  ): Promise<CustomElementConstructor> {
+  ): Promise<new () => HTMLElement> {
     return customElements.whenDefined(componentName);
   }
 
