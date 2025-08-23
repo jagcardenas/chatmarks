@@ -142,21 +142,24 @@ export class ShortcutActions {
    */
   private async handleNextBookmarkShortcut(): Promise<void> {
     if (!this.bookmarkOperations) {
-      console.log('Chatmarks: Bookmark operations not initialized');
+      console.warn('Chatmarks: Bookmark operations not initialized');
       return;
     }
 
-    // TODO: Implement next bookmark navigation (Task 15)
-    // This will require tracking current bookmark position
-    console.log(
-      'Next bookmark shortcut triggered - full navigation not yet implemented'
-    );
+    try {
+      const result = await this.bookmarkOperations.navigateToNextBookmark();
 
-    // For now, just get and log bookmarks
-    const bookmarks =
-      await this.bookmarkOperations.getBookmarksForConversation();
-    if (bookmarks.length > 0) {
-      console.log(`Found ${bookmarks.length} bookmarks in conversation`);
+      if (result.success) {
+        console.debug('Chatmarks: Successfully navigated to next bookmark');
+        // Optionally show a brief notification to user
+        this.showNavigationFeedback('Next bookmark');
+      } else {
+        console.debug('Chatmarks: No next bookmark available');
+        this.showNavigationFeedback('No next bookmark');
+      }
+    } catch (error) {
+      console.error('Chatmarks: Error navigating to next bookmark:', error);
+      this.showNavigationFeedback('Navigation failed');
     }
   }
 
@@ -166,21 +169,23 @@ export class ShortcutActions {
    */
   private async handlePrevBookmarkShortcut(): Promise<void> {
     if (!this.bookmarkOperations) {
-      console.log('Chatmarks: Bookmark operations not initialized');
+      console.warn('Chatmarks: Bookmark operations not initialized');
       return;
     }
 
-    // TODO: Implement previous bookmark navigation (Task 15)
-    // This will require tracking current bookmark position
-    console.log(
-      'Previous bookmark shortcut triggered - full navigation not yet implemented'
-    );
+    try {
+      const result = await this.bookmarkOperations.navigateToPreviousBookmark();
 
-    // For now, just get and log bookmarks
-    const bookmarks =
-      await this.bookmarkOperations.getBookmarksForConversation();
-    if (bookmarks.length > 0) {
-      console.log(`Found ${bookmarks.length} bookmarks in conversation`);
+      if (result.success) {
+        console.debug('Chatmarks: Successfully navigated to previous bookmark');
+        this.showNavigationFeedback('Previous bookmark');
+      } else {
+        console.debug('Chatmarks: No previous bookmark available');
+        this.showNavigationFeedback('No previous bookmark');
+      }
+    } catch (error) {
+      console.error('Chatmarks: Error navigating to previous bookmark:', error);
+      this.showNavigationFeedback('Navigation failed');
     }
   }
 
@@ -271,6 +276,59 @@ export class ShortcutActions {
 
     // Check if shortcut exists and is not disabled
     return shortcut !== undefined;
+  }
+
+  /**
+   * Shows visual feedback for navigation actions.
+   * Creates a temporary toast notification for user feedback.
+   *
+   * @param message - The message to display to the user
+   */
+  private showNavigationFeedback(message: string): void {
+    // Create a simple toast notification for navigation feedback
+    const toast = document.createElement('div');
+    toast.className = 'chatmarks-navigation-feedback';
+    toast.textContent = message;
+
+    // Apply styles for visibility and positioning
+    Object.assign(toast.style, {
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      backgroundColor: '#333',
+      color: 'white',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      fontSize: '14px',
+      fontFamily: 'system-ui, sans-serif',
+      zIndex: '10000',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+      opacity: '0',
+      transform: 'translateY(-10px)',
+      transition: 'all 0.3s ease-in-out',
+      pointerEvents: 'none',
+    });
+
+    // Add to page
+    document.body.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+    });
+
+    // Remove after delay with fade-out animation
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-10px)';
+
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+      }, 300); // Wait for fade-out animation
+    }, 2000); // Show for 2 seconds
   }
 
   /**

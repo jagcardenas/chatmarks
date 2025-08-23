@@ -14,6 +14,7 @@ export class MessageHandler {
   private bookmarkOperations: BookmarkOperations | null = null;
   private selectionManager: SelectionManager | null = null;
   private messageListener: ((message: ExtensionMessage) => void) | null = null;
+  private heartbeatInterval: number | null = null;
 
   /**
    * Sets the bookmark operations instance for message handling.
@@ -34,7 +35,7 @@ export class MessageHandler {
   }
 
   /**
-   * Initializes the message listener.
+   * Initializes the message listener and heartbeat.
    */
   initialize(): void {
     this.messageListener = (message: ExtensionMessage) => {
@@ -42,6 +43,9 @@ export class MessageHandler {
     };
 
     chrome.runtime.onMessage.addListener(this.messageListener);
+
+    // Start heartbeat to keep connection alive
+    this.startHeartbeat();
   }
 
   /**
@@ -196,16 +200,56 @@ export class MessageHandler {
    * @param platform - The detected platform
    */
   async notifyPlatformDetected(platform: string): Promise<void> {
-    await this.sendMessage({
-      type: MessageType.PLATFORM_DETECTED,
-      data: { platform },
-    });
+    try {
+      await this.sendMessage({
+        type: MessageType.PLATFORM_DETECTED,
+        data: { platform },
+      });
+    } catch (error) {
+      console.error('Chatmarks: Failed to notify platform detection:', error);
+    }
   }
 
   /**
-   * Cleans up the message listener.
+   * Starts the heartbeat mechanism to keep connection alive.
+   */
+  private startHeartbeat(): void {
+    // Send heartbeat every 25 seconds (less than the 30 second stale threshold)
+    this.heartbeatInterval = window.setInterval(() => {
+      this.sendHeartbeat();
+    }, 25000);
+  }
+
+  /**
+   * Stops the heartbeat mechanism.
+   */
+  private stopHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
+
+  /**
+   * Sends a heartbeat message to the service worker.
+   */
+  private async sendHeartbeat(): Promise<void> {
+    try {
+      await this.sendMessage({
+        type: MessageType.PLATFORM_DETECTED,
+        data: { heartbeat: true },
+      });
+    } catch (error) {
+      console.debug('Chatmarks: Heartbeat failed, connection may be lost:', error);
+    }
+  }
+
+  /**
+   * Cleans up the message listener and heartbeat.
    */
   cleanup(): void {
+    this.stopHeartbeat();
+
     if (this.messageListener) {
       chrome.runtime.onMessage.removeListener(this.messageListener);
       this.messageListener = null;

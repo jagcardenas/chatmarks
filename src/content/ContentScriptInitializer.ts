@@ -9,25 +9,31 @@
 import { Platform } from '../types/bookmark';
 import { TextSelection } from './selection/TextSelection';
 import { AnchorSystem } from './anchoring/AnchorSystem';
-import { ChatGPTAdapter, createPlatformAdapter } from './adapters';
+import { ChatGPTAdapter, ClaudeAdapter, GrokAdapter, createPlatformAdapter } from './adapters';
 import { HighlightRenderer } from './ui/highlights/HighlightRenderer';
 import { KeyboardManager } from './keyboard/KeyboardManager';
 import { ThemeManager } from './utils/ThemeManager';
-import { detectCurrentPlatform } from './utils/PlatformUtils';
+import {
+  detectCurrentPlatform,
+  extractConversationId,
+} from './utils/PlatformUtils';
 import { UIManager } from './UIManager';
 import { SelectionManager } from './SelectionManager';
 import { BookmarkOperations } from './BookmarkOperations';
 import { MessageHandler } from './MessageHandler';
 import { ShortcutActions } from './ShortcutActions';
+import { NavigationController } from './navigation/NavigationController';
+import { StorageService } from './storage/StorageService';
 
 export class ContentScriptInitializer {
   // Core managers
   private textSelection: TextSelection | null = null;
   private anchorSystem: AnchorSystem | null = null;
-  private platformAdapter: ChatGPTAdapter | null = null;
+  private platformAdapter: ChatGPTAdapter | ClaudeAdapter | GrokAdapter | null = null;
   private highlightRenderer: HighlightRenderer | null = null;
   private keyboardManager: KeyboardManager | null = null;
   private themeManager: ThemeManager | null = null;
+  private storageService: StorageService | null = null;
 
   // Coordinators
   private uiManager: UIManager | null = null;
@@ -35,6 +41,7 @@ export class ContentScriptInitializer {
   private bookmarkOperations: BookmarkOperations | null = null;
   private messageHandler: MessageHandler | null = null;
   private shortcutActions: ShortcutActions | null = null;
+  private navigationController: NavigationController | null = null;
 
   // State
   private currentPlatform: Platform | null = null;
@@ -76,7 +83,7 @@ export class ContentScriptInitializer {
       await this.themeManager!.applyThemeFromSettings();
 
       // Set up all interactions
-      this.setupManagerInteractions();
+      await this.setupManagerInteractions();
 
       // Restore existing highlights
       await this.bookmarkOperations!.restoreExistingHighlights();
@@ -104,6 +111,7 @@ export class ContentScriptInitializer {
     this.highlightRenderer = new HighlightRenderer(document);
     this.keyboardManager = new KeyboardManager(document);
     this.themeManager = new ThemeManager();
+    this.storageService = new StorageService();
   }
 
   /**
@@ -127,6 +135,25 @@ export class ContentScriptInitializer {
       this.currentPlatform!
     );
 
+    // Initialize navigation controller with current conversation
+    const conversationId = extractConversationId();
+    this.navigationController = new NavigationController(
+      this.storageService!,
+      this.bookmarkOperations,
+      conversationId,
+      {
+        enableSmoothScrolling: true,
+        highlightDuration: 3000,
+        enableURLState: true,
+        enableCrossConversation: true,
+        scrollOffset: 100,
+        navigationDebounce: 100,
+      }
+    );
+
+    // Set navigation controller in bookmark operations
+    this.bookmarkOperations.setNavigationController(this.navigationController);
+
     // Initialize message handler
     this.messageHandler = new MessageHandler();
     this.messageHandler.setBookmarkOperations(this.bookmarkOperations);
@@ -144,7 +171,7 @@ export class ContentScriptInitializer {
   /**
    * Sets up interactions between all managers.
    */
-  private setupManagerInteractions(): void {
+  private async setupManagerInteractions(): Promise<void> {
     // Set up UI manager callbacks
     this.uiManager!.setCallbacks({
       onSaveBookmark: async (note: string) => {
@@ -173,6 +200,7 @@ export class ContentScriptInitializer {
     this.selectionManager!.initialize();
     this.messageHandler!.initialize();
     this.shortcutActions!.initialize();
+    await this.navigationController!.initialize();
   }
 
   /**
@@ -221,6 +249,15 @@ export class ContentScriptInitializer {
   }
 
   /**
+   * Gets the navigation controller instance.
+   *
+   * @returns The navigation controller instance or null
+   */
+  getNavigationController(): NavigationController | null {
+    return this.navigationController;
+  }
+
+  /**
    * Updates the theme with new settings.
    *
    * @param accentColor - The new accent color
@@ -261,11 +298,13 @@ export class ContentScriptInitializer {
       highlightRenderer: boolean;
       keyboardManager: boolean;
       themeManager: boolean;
+      storageService: boolean;
       uiManager: boolean;
       selectionManager: boolean;
       bookmarkOperations: boolean;
       messageHandler: boolean;
       shortcutActions: boolean;
+      navigationController: boolean;
     };
   } {
     return {
@@ -277,11 +316,13 @@ export class ContentScriptInitializer {
         highlightRenderer: this.highlightRenderer !== null,
         keyboardManager: this.keyboardManager !== null,
         themeManager: this.themeManager !== null,
+        storageService: this.storageService !== null,
         uiManager: this.uiManager !== null,
         selectionManager: this.selectionManager !== null,
         bookmarkOperations: this.bookmarkOperations !== null,
         messageHandler: this.messageHandler !== null,
         shortcutActions: this.shortcutActions !== null,
+        navigationController: this.navigationController !== null,
       },
     };
   }
@@ -294,6 +335,11 @@ export class ContentScriptInitializer {
 
     try {
       // Clean up coordinators
+      if (this.navigationController) {
+        this.navigationController.cleanup();
+        this.navigationController = null;
+      }
+
       if (this.shortcutActions) {
         this.shortcutActions.cleanup();
         this.shortcutActions = null;
@@ -335,6 +381,7 @@ export class ContentScriptInitializer {
       this.anchorSystem = null;
       this.platformAdapter = null;
       this.themeManager = null;
+      this.storageService = null;
       this.currentPlatform = null;
       this.isInitialized = false;
 
