@@ -35,6 +35,12 @@ const mockChrome = {
   },
   tabs: {
     sendMessage: jest.fn(),
+    onRemoved: {
+      addListener: jest.fn(),
+    },
+    onUpdated: {
+      addListener: jest.fn(),
+    },
   },
 };
 
@@ -172,12 +178,18 @@ describe('Service Worker', () => {
       await import('../src/background/service-worker');
     });
 
-    it('should handle context menu click and send message to content script', () => {
+    it('should handle context menu click and send message to content script', async () => {
       const mockInfo = {
         menuItemId: 'create-bookmark',
         selectionText: 'This is selected text for bookmarking',
       };
       const mockTab = { id: 42 };
+
+      // Import the service worker module to access its functions
+      const serviceWorkerModule = await import('../src/background/service-worker');
+
+      // Mock the isTabConnected function to return true
+      const mockIsTabConnected = jest.spyOn(serviceWorkerModule, 'isTabConnected').mockReturnValue(true);
 
       // Get the click handler
       const clickHandler =
@@ -194,6 +206,9 @@ describe('Service Worker', () => {
         type: MessageType.CREATE_BOOKMARK_FROM_CONTEXT,
         data: { selectionText: 'This is selected text for bookmarking' },
       });
+
+      // Restore the original function
+      mockIsTabConnected.mockRestore();
     });
 
     it('should not send message when tab ID is missing', () => {

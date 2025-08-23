@@ -13,6 +13,63 @@ import {
 } from '../types/messages';
 import { Bookmark, Platform, TextAnchor } from '../types/bookmark';
 
+// Connection status tracking
+interface TabConnection {
+  tabId: number;
+  platform?: Platform;
+  isReady: boolean;
+  lastSeen: number;
+}
+
+const connectedTabs = new Map<number, TabConnection>();
+
+/**
+ * Connection management functions
+ */
+function registerTabConnection(tabId: number, platform?: Platform): void {
+  connectedTabs.set(tabId, {
+    tabId,
+    platform,
+    isReady: true,
+    lastSeen: Date.now(),
+  });
+  console.debug(`Chatmarks: Tab ${tabId} connected with platform: ${platform || 'unknown'}`);
+}
+
+function unregisterTabConnection(tabId: number): void {
+  connectedTabs.delete(tabId);
+  console.debug(`Chatmarks: Tab ${tabId} disconnected`);
+}
+
+function isTabConnected(tabId: number): boolean {
+  const connection = connectedTabs.get(tabId);
+  if (!connection) return false;
+
+  // Check if connection is stale (older than 30 seconds)
+  const isStale = Date.now() - connection.lastSeen > 30000;
+  if (isStale) {
+    connectedTabs.delete(tabId);
+    return false;
+  }
+
+  return connection.isReady;
+}
+
+function updateTabHeartbeat(tabId: number): void {
+  const connection = connectedTabs.get(tabId);
+  if (connection) {
+    connection.lastSeen = Date.now();
+  }
+}
+
+// Export connection functions for testing
+export {
+  registerTabConnection,
+  unregisterTabConnection,
+  isTabConnected,
+  updateTabHeartbeat
+};
+
 /**
  * Initialize extension on installation
  */
@@ -65,15 +122,76 @@ async function initializeDefaultSettings(): Promise<void> {
 /**
  * Handle context menu item clicks
  */
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'create-bookmark' && tab?.id) {
-    // Send message to content script to create bookmark
-    chrome.tabs.sendMessage(tab.id, {
-      type: MessageType.CREATE_BOOKMARK_FROM_CONTEXT,
-      data: { selectionText: info.selectionText },
-    } as BookmarkMessage);
+    await handleContextMenuBookmarkCreation(tab.id, info.selectionText);
   }
 });
+
+/**
+ * Handles context menu bookmark creation with proper error handling and retry logic
+ */
+async function handleContextMenuBookmarkCreation(
+  tabId: number,
+  selectionText?: string
+): Promise<void> {
+  // First check if tab is connected before attempting to send message
+  if (!isTabConnected(tabId)) {
+    console.warn('Chatmarks: Tab not connected, skipping context menu bookmark creation');
+    return;
+  }
+
+  const maxRetries = 3;
+  const retryDelay = 100; // ms
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Check if the tab still exists and is active
+      const tab = await chrome.tabs.get(tabId);
+      if (!tab || tab.status !== 'complete') {
+        if (attempt === maxRetries) {
+          console.warn('Chatmarks: Tab not ready for context menu bookmark creation');
+          unregisterTabConnection(tabId);
+        }
+        continue;
+      }
+
+      // Send message to content script to create bookmark
+      const response = await chrome.tabs.sendMessage(tabId, {
+        type: MessageType.CREATE_BOOKMARK_FROM_CONTEXT,
+        data: { selectionText },
+      } as BookmarkMessage);
+
+      if (response?.success === false) {
+        console.warn('Chatmarks: Content script reported error:', response.error);
+      }
+
+      // Success - update heartbeat and exit retry loop
+      updateTabHeartbeat(tabId);
+      return;
+
+    } catch (error) {
+      const isConnectionError = error instanceof Error &&
+        error.message.includes('Could not establish connection');
+
+      if (isConnectionError) {
+        // Mark tab as disconnected
+        unregisterTabConnection(tabId);
+
+        if (attempt < maxRetries) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+          console.debug(`Chatmarks: Retrying context menu bookmark creation (attempt ${attempt + 1})`);
+          continue;
+        }
+      }
+
+      // Final attempt failed or non-connection error
+      console.error('Chatmarks: Failed to create bookmark from context menu:', error);
+      return;
+    }
+  }
+}
 
 /**
  * Handle messages from content scripts and popup
@@ -101,12 +219,43 @@ chrome.runtime.onMessage.addListener(
         handleCreateBookmark(message.data || {}, sendResponse);
         return true;
 
+      case MessageType.PLATFORM_DETECTED:
+        handlePlatformDetected(sender, message.data || {});
+        return false;
+
       default:
         // Unknown message type - ignoring
         return false;
     }
   }
 );
+
+/**
+ * Handle platform detection from content scripts
+ */
+function handlePlatformDetected(
+  sender: chrome.runtime.MessageSender,
+  data: Record<string, unknown>
+): void {
+  if (sender.tab?.id) {
+    const tabId = sender.tab.id;
+
+    // Check if this is a heartbeat or initial platform detection
+    if (data.heartbeat) {
+      // This is a heartbeat - just update the connection status
+      if (isTabConnected(tabId)) {
+        updateTabHeartbeat(tabId);
+      } else {
+        console.debug(`Chatmarks: Received heartbeat from untracked tab ${tabId}`);
+      }
+    } else {
+      // This is initial platform detection
+      const platform = data.platform as Platform;
+      registerTabConnection(tabId, platform);
+      updateTabHeartbeat(tabId);
+    }
+  }
+}
 
 /**
  * Handle settings retrieval requests
@@ -222,4 +371,24 @@ async function handleCreateBookmark(
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
+}
+
+/**
+ * Clean up connections when tabs are closed or updated
+ * Only add listeners if chrome.tabs is available (not in test environment)
+ */
+if (typeof chrome !== 'undefined' && chrome.tabs) {
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    unregisterTabConnection(tabId);
+  });
+
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    // If tab is loading or complete, mark connection as potentially stale
+    if (changeInfo.status === 'loading') {
+      const connection = connectedTabs.get(tabId);
+      if (connection) {
+        connection.isReady = false;
+      }
+    }
+  });
 }
